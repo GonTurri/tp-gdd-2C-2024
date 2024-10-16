@@ -129,3 +129,51 @@ CREATE TABLE PIZZA_VIERNES_UADE.envio (
 	cod_venta decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.venta(cod_venta),
 	cod_domicilio decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.domicilio(cod_domicilio)
 );
+
+--TODO
+CREATE TABLE PIZZA_VIERNES_UADE.subrubro (
+	cod_subrubro decimal(18,0) PRIMARY KEY,
+	descripcion nvarchar(50)
+);
+
+CREATE TABLE PIZZA_VIERNES_UADE.producto (
+	id_producto decimal(18,0) PRIMARY KEY,
+	cod_producto nvarchar(50),
+	cod_marca decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.producto_marca(cod_marca),
+	cod_modelo decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.producto_modelo(cod_modelo),
+	descripcion nvarchar(50),
+	precio decimal(18,2),
+	cod_subrubro decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.subrubro(cod_subrubro)
+);
+
+CREATE TABLE PIZZA_VIERNES_UADE.publicacion (
+	cod_publicacion decimal(18,0) PRIMARY KEY,
+	descripcion nvarchar(50),
+	stock decimal(18,0),
+	fecha_inicio date,
+	fecha_fin date,
+	precio decimal(18,2),
+	costo decimal(18,2),
+	porc_venta decimal(18,2),
+	cod_almacen decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.almacen(cod_almacen),
+	cod_vendedor decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.vendedor(cod_vendedor),
+	id_producto decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.producto(id_producto)
+);
+
+CREATE TABLE PIZZA_VIERNES_UADE.detalle_venta (
+	cod_venta decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.venta(cod_venta),
+	cod_publicacion decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion(cod_publicacion),
+	detalle_cant decimal(18,0),
+	detalle_precio decimal(18,2),
+	detalle_sub_tot decimal(18,2),
+	PRIMARY KEY (cod_venta, cod_publicacion)
+);
+
+CREATE TABLE PIZZA_VIERNES_UADE.detalle_factura (
+	cod_detalle_factura decimal(18,0) PRIMARY KEY,
+	cod_concepto_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.concepto_factura(cod_concepto_factura),
+	nro_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.factura(nro_factura),
+	cod_publicacion decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion(cod_publicacion),
+	cantidad decimal(18,0),
+	sub_total decimal(18,2)
+);
