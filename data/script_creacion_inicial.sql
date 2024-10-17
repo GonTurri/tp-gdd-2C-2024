@@ -130,10 +130,10 @@ CREATE TABLE PIZZA_VIERNES_UADE.envio (
 	cod_domicilio decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.domicilio(cod_domicilio)
 );
 
---TODO
 CREATE TABLE PIZZA_VIERNES_UADE.subrubro (
 	cod_subrubro decimal(18,0) PRIMARY KEY,
-	descripcion nvarchar(50)
+	descripcion nvarchar(50),
+	cod_rubro decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.rubro(cod_rubro)
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.producto (
@@ -177,3 +177,17 @@ CREATE TABLE PIZZA_VIERNES_UADE.detalle_factura (
 	cantidad decimal(18,0),
 	sub_total decimal(18,2)
 );
+
+GO
+
+CREATE PROCEDURE PIZZA_VIERNES_UADE.migrar_todo AS
+BEGIN
+PRINT 'hola mati'
+PRINT 'hola banda de Douglas'
+END
+
+GO
+
+EXEC PIZZA_VIERNES_UADE.migrar_todo;
+
+GO
