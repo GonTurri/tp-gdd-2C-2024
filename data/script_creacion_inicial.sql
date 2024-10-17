@@ -5,12 +5,12 @@ CREATE SCHEMA PIZZA_VIERNES_UADE
 GO
 
 CREATE TABLE PIZZA_VIERNES_UADE.provincia (
-	cod_provincia decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_provincia decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	nom_provincia nvarchar(50) NOT NULL UNIQUE
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.localidad (
-	cod_localidad decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_localidad decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	nom_localidad nvarchar(50) NOT NULL,
 	cod_provincia decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.provincia(cod_provincia) NOT NULL
 );
@@ -32,14 +32,14 @@ ALTER TABLE PIZZA_VIERNES_UADE.almacen ADD CONSTRAINT costo_dia_al_negativo
 CHECK (costo_dia_al >= 0);
 
 CREATE TABLE PIZZA_VIERNES_UADE.usuario (
-	cod_usuario decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_usuario decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	nombre nvarchar(50) NOT NULL UNIQUE,
 	pass nvarchar(50) NOT NULL,
 	fecha_creacion date NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.cliente (
-	cod_cliente decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_cliente decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	nombre nvarchar(50) NOT NULL,
 	apellido nvarchar(50) NOT NULL,
 	fecha_nac date NOT NULL,
@@ -59,7 +59,7 @@ ALTER TABLE PIZZA_VIERNES_UADE.cliente ADD CONSTRAINT cliente_dni_negativo
 CHECK (dni > 0);
 
 CREATE TABLE PIZZA_VIERNES_UADE.vendedor (
-	cod_vendedor decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_vendedor decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	razon_social nvarchar(50) NOT NULL,
 	cuit nvarchar(50) NOT NULL UNIQUE,
 	mail nvarchar(50) NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE PIZZA_VIERNES_UADE.vendedor (
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.domicilio (
-	cod_domicilio decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_domicilio decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	calle nvarchar(50) NOT NULL,
 	nro_calle decimal(18,0) NOT NULL,
 	piso decimal(18,0) NOT NULL,
@@ -97,27 +97,27 @@ CREATE TABLE PIZZA_VIERNES_UADE.concepto_factura (
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.producto_modelo (
-	cod_modelo decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_modelo decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	descripcion nvarchar(50) NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.producto_marca (
-	cod_marca decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_marca decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	descripcion nvarchar(50) NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.rubro (
-	cod_rubro decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_rubro decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	descripcion nvarchar(50) NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.tipo_medio_pago (
-	cod_tipo_medio_pago decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_tipo_medio_pago decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	descripcion nvarchar(50) NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.medio_pago (
-	cod_medio_pago decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_medio_pago decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	medio nvarchar(50) NOT NULL,
 	cod_tipo_medio_pago decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.tipo_medio_pago(cod_tipo_medio_pago) NOT NULL
 );
@@ -136,7 +136,7 @@ ALTER TABLE PIZZA_VIERNES_UADE.venta ADD CONSTRAINT venta_total_negativo
 CHECK (total >= 0);
 
 CREATE TABLE PIZZA_VIERNES_UADE.pago (
-	nro_pago decimal(18,0) PRIMARY KEY NOT NULL,
+	nro_pago decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	importe decimal(18,2) NOT NULL,
 	cod_venta decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.venta(cod_venta) NOT NULL,
 	cod_medio_pago decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.medio_pago(cod_medio_pago) NOT NULL
@@ -158,7 +158,7 @@ ALTER TABLE PIZZA_VIERNES_UADE.detalle_pago ADD CONSTRAINT cant_cuotas_negativo
 CHECK (cant_cuotas >= 1);
 
 CREATE TABLE PIZZA_VIERNES_UADE.envio (
-	nro_envio decimal(18,0) PRIMARY KEY NOT NULL,
+	nro_envio decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	fecha_programada date NOT NULL,
 	hora_inicio decimal(18,0) NOT NULL,
 	hora_fin decimal(18,0) NOT NULL,
@@ -182,13 +182,13 @@ ALTER TABLE PIZZA_VIERNES_UADE.envio ADD CONSTRAINT horas_coherentes_envio
 CHECK (hora_fin >= hora_inicio);
 
 CREATE TABLE PIZZA_VIERNES_UADE.subrubro (
-	cod_subrubro decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_subrubro decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	descripcion nvarchar(50) NOT NULL,
 	cod_rubro decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.rubro(cod_rubro) NOT NULL
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.producto (
-	id_producto decimal(18,0) PRIMARY KEY NOT NULL,
+	id_producto decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	cod_producto nvarchar(50) NOT NULL,
 	cod_marca decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.producto_marca(cod_marca) NOT NULL,
 	cod_modelo decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.producto_modelo(cod_modelo) NOT NULL,
@@ -257,7 +257,7 @@ ALTER TABLE PIZZA_VIERNES_UADE.detalle_venta ADD CONSTRAINT detalle_venta_detall
 CHECK (detalle_sub_tot >= 0); 
 
 CREATE TABLE PIZZA_VIERNES_UADE.detalle_factura (
-	cod_detalle_factura decimal(18,0) PRIMARY KEY NOT NULL,
+	cod_detalle_factura decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	cod_concepto_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.concepto_factura(cod_concepto_factura) NOT NULL,
 	nro_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.factura(nro_factura) NOT NULL,
 	cod_publicacion decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion(cod_publicacion) NOT NULL,
@@ -277,8 +277,37 @@ GO
 
 CREATE PROCEDURE PIZZA_VIERNES_UADE.migrar_todo AS
 BEGIN
-	PRINT 'hola mati'
-	PRINT 'hola banda de Douglas'
+	-- MIGRACION DE PROVINCIAS
+	INSERT INTO PIZZA_VIERNES_UADE.provincia (nom_provincia)
+	(SELECT DISTINCT ALMACEN_PROVINCIA FROM gd_esquema.Maestra WHERE ALMACEN_PROVINCIA IS NOT NULL UNION 
+	SELECT DISTINCT CLI_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra  WHERE CLI_USUARIO_DOMICILIO_PROVINCIA IS NOT NULL
+	UNION SELECT DISTINCT VEN_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra WHERE VEN_USUARIO_DOMICILIO_PROVINCIA IS NOT NULL)
+
+
+	--MIGRACION DE LOCALIDADES POR FAVOR REVISAR PORQUE SON COMO 17K
+	INSERT INTO PIZZA_VIERNES_UADE.localidad (cod_provincia,nom_localidad)
+	SELECT cod_provincia, localidad  FROM PIZZA_VIERNES_UADE.provincia p JOIN (
+	SELECT DISTINCT ALMACEN_PROVINCIA as provincia, ALMACEN_Localidad as localidad FROM gd_esquema.Maestra WHERE ALMACEN_Localidad IS NOT NULL
+	UNION
+	SELECT DISTINCT VEN_USUARIO_DOMICILIO_PROVINCIA, VEN_USUARIO_DOMICILIO_LOCALIDAD FROM gd_esquema.Maestra
+	WHERE VEN_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL 
+	UNION
+	SELECT DISTINCT CLI_USUARIO_DOMICILIO_PROVINCIA, CLI_USUARIO_DOMICILIO_LOCALIDAD FROM gd_esquema.Maestra
+	WHERE CLI_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL) m ON m.provincia = p.nom_provincia
+
+
+	
+	-- MIGRACION DE RUBROS
+	INSERT INTO PIZZA_VIERNES_UADE.rubro (descripcion) 
+	SELECT DISTINCT PRODUCTO_RUBRO_DESCRIPCION FROM gd_esquema.Maestra WHERE PRODUCTO_RUBRO_DESCRIPCION IS NOT NULL
+
+
+	--MIGRACION DE SUBRUBROS, TAMBIEN REVISAR
+	INSERT INTO PIZZA_VIERNES_UADE.subrubro (descripcion,cod_rubro) 
+	SELECT PRODUCTO_SUB_RUBRO, cod_rubro FROM PIZZA_VIERNES_UADE.rubro r INNER JOIN
+	(SELECT DISTINCT PRODUCTO_SUB_RUBRO, PRODUCTO_RUBRO_DESCRIPCION FROM gd_esquema.Maestra WHERE PRODUCTO_SUB_RUBRO IS NOT NULL) m
+	ON r.descripcion = m.PRODUCTO_RUBRO_DESCRIPCION
+
 END
 
 GO
