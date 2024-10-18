@@ -33,7 +33,7 @@ CHECK (costo_dia_al >= 0);
 
 CREATE TABLE PIZZA_VIERNES_UADE.usuario (
 	cod_usuario decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
-	nombre nvarchar(50) NOT NULL UNIQUE,
+	nombre nvarchar(50) NOT NULL,
 	pass nvarchar(50) NOT NULL,
 	fecha_creacion date NOT NULL
 );
@@ -73,6 +73,7 @@ CREATE TABLE PIZZA_VIERNES_UADE.domicilio (
 	piso decimal(18,0) NOT NULL,
 	depto nvarchar(50) NOT NULL,
 	cp nvarchar(50) NOT NULL,
+	cod_usuario decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.usuario(cod_usuario) NOT NULL,
 	cod_localidad decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.localidad(cod_localidad) NOT NULL
 );
 
