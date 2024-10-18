@@ -257,14 +257,15 @@ CHECK (detalle_precio >= 0);
 ALTER TABLE PIZZA_VIERNES_UADE.detalle_venta ADD CONSTRAINT detalle_venta_detalle_sub_total_negativo
 CHECK (detalle_sub_tot >= 0); 
 
-CREATE TABLE PIZZA_VIERNES_UADE.detalle_factura (
-	cod_detalle_factura decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
-	cod_concepto_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.concepto_factura(cod_concepto_factura) NOT NULL,
-	nro_factura decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.factura(nro_factura) NOT NULL,
-	cod_publicacion decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion(cod_publicacion) NOT NULL,
-	cantidad decimal(18,0) NOT NULL,
-	sub_total decimal(18,2) NOT NULL
-);
+CREATE TABLE
+	PIZZA_VIERNES_UADE.detalle_factura (
+		cod_detalle_factura decimal(18, 0) PRIMARY KEY IDENTITY (1, 1) NOT NULL,
+		cod_concepto_factura decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.concepto_factura (cod_concepto_factura) NOT NULL,
+		nro_factura decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.factura (nro_factura) NOT NULL,
+		cod_publicacion decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion (cod_publicacion) NOT NULL,
+		cantidad decimal(18, 0) NOT NULL,
+		sub_total decimal(18, 2) NOT NULL
+	);
 
 -- constraint para que no haya un detalle con cantidad negativa
 ALTER TABLE PIZZA_VIERNES_UADE.detalle_factura ADD CONSTRAINT detalle_fact_cant_negativo
@@ -280,99 +281,73 @@ GO
 
 -- trigger para que una factura no haga referencia a publicaciones creadas en fechas posteriores
 CREATE or ALTER TRIGGER tr_check_fechas_factura_publicacion ON PIZZA_VIERNES_UADE.detalle_factura
-INSTEAD OF insert, update AS
-BEGIN
-	DECLARE @fecha_factura date,
-			@fecha_publicacion date,
-			@cod_concepto_factura decimal(18,0),
-			@nro_factura decimal(18,0),
-			@cod_publicacion decimal(18,0),
-			@cantidad decimal(18,0),
-			@sub_total decimal(18,2);
-
-	DECLARE cursor_detalles CURSOR FOR
-		SELECT f.fecha, p.fecha_inicio, cod_concepto_factura, i.nro_factura, i.cod_publicacion, cantidad, sub_total FROM inserted i
-		JOIN publicacion p ON i.cod_publicacion=p.cod_publicacion
-		JOIN factura f ON i.nro_factura=f.nro_factura;
-
-	OPEN cursor_detalles;
-	FETCH NEXT FROM cursor_detalles into @fecha_factura, @fecha_publicacion, @cod_concepto_factura, @nro_factura, @cod_publicacion, @cantidad, @sub_total;
-	
-	WHILE @@FETCH_STATUS=0
-	BEGIN
-		IF (@fecha_publicacion > @fecha_factura)
-			BEGIN;
-				DECLARE @msg_error varchar;
-				SET @msg_error = 'Error: No se puede agregar un detalle por una publicacion iniciada en ' + CAST(@fecha_publicacion as varchar) + ' a una factura de la fecha: ' + CAST(@fecha_factura as varchar);
-				THROW 50001, @msg_error, 1;
-			END;
-		ELSE
-			BEGIN
-				INSERT INTO detalle_factura(cod_concepto_factura, nro_factura, cod_publicacion, cantidad, sub_total)
-				VALUES(@cod_concepto_factura, @nro_factura, @cod_publicacion, @cantidad, @sub_total);
-			END;
-		
-		FETCH NEXT FROM cursor_detalles into @fecha_factura, @fecha_publicacion;
-	END;
-
-	CLOSE cursor_detalles;
-	DEALLOCATE cursor_detalles;
+AFTER insert, update AS
+BEGIN	
+	DECLARE @cantidad_con_fecha_inconsistente INT;
+	SELECT @cantidad_con_fecha_inconsistente =  COUNT(*) FROM inserted i
+	JOIN publicacion p ON i.cod_publicacion=p.cod_publicacion
+	JOIN factura f ON i.nro_factura=f.nro_factura
+	WHERE p.fecha_inicio > f.fecha
+	IF (@cantidad_con_fecha_inconsistente >= 1)
+		BEGIN
+			DECLARE @msg_error varchar;
+			SET @msg_error = 'Error: No se puede agregar un detalle por una publicacion iniciada posteriormente a la cracion de la factura' ;
+			ROLLBACK;
+			THROW 50001, @msg_error, 1;
+	END
 END;
 
 GO
 
 -- trigger para que un envio no tenga fecha anterior a la venta
 CREATE or ALTER TRIGGER tr_check_fecha_envio ON PIZZA_VIERNES_UADE.envio
-INSTEAD OF insert, update AS
+AFTER insert, update AS
 BEGIN
-	DECLARE @fecha_venta datetime,
-			@fecha_programada date,
-			@hora_inicio decimal(18,0),
-			@hora_fin decimal(18,0),
-			@costo decimal(18,2),
-			@fecha_hora_entrega datetime,
-			@tipo nvarchar(50),
-			@cod_venta decimal(18,0),
-			@cod_domicilio decimal(18,0);
-
-	DECLARE cursor_envios CURSOR FOR
-		SELECT v.fecha_hora, fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, i.cod_venta, cod_domicilio FROM inserted i
-		JOIN venta v ON i.cod_venta=v.cod_venta;
-
-	OPEN cursor_envios;
-	FETCH NEXT FROM cursor_envios into @fecha_venta, @fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio;
+	DECLARE @cantidad_con_fecha_inconsistente INT;
+		SELECT  @cantidad_con_fecha_inconsistente =  COUNT(*) FROM inserted i
+		JOIN venta v ON i.cod_venta=v.cod_venta WHERE i.fecha_programada < v.fecha OR i.fecha_hora_entrega < v.fecha
 	
-	WHILE @@FETCH_STATUS=0
-	BEGIN
-		IF (@fecha_programada < @fecha_venta OR @fecha_hora_entrega < @fecha_venta)
-			BEGIN;
+		IF (@cantidad_con_fecha_inconsistente >=1)
+			BEGIN
 				DECLARE @msg_error varchar;
 				SET @msg_error = 'La fecha programada o de entrega del envio es anterior a la fecha de la venta';
+				ROLLBACK;
 				THROW 50001, @msg_error, 1;
 			END;
-		ELSE
-			BEGIN
-				INSERT INTO envio(fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, cod_venta, cod_domicilio)
-				VALUES(@fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio);
-			END;
-		
-		FETCH NEXT FROM cursor_detalles into @fecha_venta, @fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio;
-	END;
-
-	CLOSE cursor_envios;
-	DEALLOCATE cursor_envios;
 END;
 
 GO
 
+-- trigger para que una venta no tenga fecha fuera del rango de la publicacion asociada
+CREATE or ALTER TRIGGER tr_check_fecha_venta ON PIZZA_VIERNES_UADE.venta
+AFTER INSERT, UPDATE AS
+BEGIN
+	DECLARE @cantidad_con_fecha_inconsistente INT;
+	SELECT @cantidad_con_fecha_inconsistente = COUNT(*) FROM inserted i
+	JOIN detalle_venta dv ON i.cod_venta = dv.cod_venta
+	JOIN publicacion p ON dv.cod_publicacion = p.cod_publicacion
+	WHERE i.GETDATE(fecha_hora) < p.fecha_inicio OR i.GETDATE(fecha_hora) > p.fecha_fin
+
+	IF (@cantidad_con_fecha_inconsistente >= 1)
+		BEGIN
+			DECLARE @msg_error varchar;
+				SET @msg_error = 'La fecha de venta esta fuera del rango de fechas de la publicacion asociada';
+				ROLLBACK;
+				THROW 50001, @msg_error, 1;
+		END;
+END;
+
+GO
+
+
 CREATE or ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_todo AS
 BEGIN
+
 	-- MIGRACION DE PROVINCIAS
 	INSERT INTO PIZZA_VIERNES_UADE.provincia (nom_provincia)
 	(SELECT DISTINCT ALMACEN_PROVINCIA FROM gd_esquema.Maestra WHERE ALMACEN_PROVINCIA IS NOT NULL UNION 
 	SELECT DISTINCT CLI_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra  WHERE CLI_USUARIO_DOMICILIO_PROVINCIA IS NOT NULL
 	UNION SELECT DISTINCT VEN_USUARIO_DOMICILIO_PROVINCIA FROM gd_esquema.Maestra WHERE VEN_USUARIO_DOMICILIO_PROVINCIA IS NOT NULL)
-
 
 	--MIGRACION DE LOCALIDADES POR FAVOR REVISAR PORQUE SON COMO 17K
 	INSERT INTO PIZZA_VIERNES_UADE.localidad (cod_provincia,nom_localidad)
@@ -385,18 +360,25 @@ BEGIN
 	SELECT DISTINCT CLI_USUARIO_DOMICILIO_PROVINCIA, CLI_USUARIO_DOMICILIO_LOCALIDAD FROM gd_esquema.Maestra
 	WHERE CLI_USUARIO_DOMICILIO_LOCALIDAD IS NOT NULL) m ON m.provincia = p.nom_provincia
 
-
-	
 	-- MIGRACION DE RUBROS
 	INSERT INTO PIZZA_VIERNES_UADE.rubro (descripcion) 
 	SELECT DISTINCT PRODUCTO_RUBRO_DESCRIPCION FROM gd_esquema.Maestra WHERE PRODUCTO_RUBRO_DESCRIPCION IS NOT NULL
-
 
 	--MIGRACION DE SUBRUBROS, TAMBIEN REVISAR
 	INSERT INTO PIZZA_VIERNES_UADE.subrubro (descripcion,cod_rubro) 
 	SELECT PRODUCTO_SUB_RUBRO, cod_rubro FROM PIZZA_VIERNES_UADE.rubro r INNER JOIN
 	(SELECT DISTINCT PRODUCTO_SUB_RUBRO, PRODUCTO_RUBRO_DESCRIPCION FROM gd_esquema.Maestra WHERE PRODUCTO_SUB_RUBRO IS NOT NULL) m
 	ON r.descripcion = m.PRODUCTO_RUBRO_DESCRIPCION
+
+	--MIGRACION DE TIPOS DE MEDIOS DE PAGO
+	INSERT INTO PIZZA_VIERNES_UADE.tipo_medio_pago (descripcion)
+	SELECT DISTINCT PAGO_TIPO_MEDIO_PAGO FROM gd_esquema.Maestra WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
+
+	--MIGRACION DE MEDIOS DE PAGO
+	INSERT INTO PIZZA_VIERNES_UADE.medio_pago (medio, cod_tipo_medio_pago)
+	SELECT m.PAGO_MEDIO_PAGO, tmp.cod_tipo_medio_pago FROM PIZZA_VIERNES_UADE.tipo_medio_pago tmp INNER JOIN
+	(SELECT DISTINCT PAGO_MEDIO_PAGO, PAGO_TIPO_MEDIO_PAGO FROM gd_esquema.Maestra WHERE PAGO_MEDIO_PAGO IS NOT NULL) m
+	ON tmp.descripcion = m.PAGO_TIPO_MEDIO_PAGO
 
 END
 
