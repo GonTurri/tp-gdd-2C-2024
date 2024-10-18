@@ -275,7 +275,96 @@ CHECK (sub_total >= 0);
 
 GO
 
-CREATE PROCEDURE PIZZA_VIERNES_UADE.migrar_todo AS
+-- CREACION DE TRIGGERS
+
+-- trigger para que una factura no haga referencia a publicaciones creadas en fechas posteriores
+CREATE or ALTER TRIGGER tr_check_fechas_factura_publicacion ON PIZZA_VIERNES_UADE.detalle_factura
+INSTEAD OF insert, update AS
+BEGIN
+	DECLARE @fecha_factura date,
+			@fecha_publicacion date,
+			@cod_concepto_factura decimal(18,0),
+			@nro_factura decimal(18,0),
+			@cod_publicacion decimal(18,0),
+			@cantidad decimal(18,0),
+			@sub_total decimal(18,2);
+
+	DECLARE cursor_detalles CURSOR FOR
+		SELECT f.fecha, p.fecha_inicio, cod_concepto_factura, i.nro_factura, i.cod_publicacion, cantidad, sub_total FROM inserted i
+		JOIN publicacion p ON i.cod_publicacion=p.cod_publicacion
+		JOIN factura f ON i.nro_factura=f.nro_factura;
+
+	OPEN cursor_detalles;
+	FETCH NEXT FROM cursor_detalles into @fecha_factura, @fecha_publicacion, @cod_concepto_factura, @nro_factura, @cod_publicacion, @cantidad, @sub_total;
+	
+	WHILE @@FETCH_STATUS=0
+	BEGIN
+		IF (@fecha_publicacion > @fecha_factura)
+			BEGIN;
+				DECLARE @msg_error varchar;
+				SET @msg_error = 'Error: No se puede agregar un detalle por una publicacion iniciada en ' + CAST(@fecha_publicacion as varchar) + ' a una factura de la fecha: ' + CAST(@fecha_factura as varchar);
+				THROW 50001, @msg_error, 1;
+			END;
+		ELSE
+			BEGIN
+				INSERT INTO detalle_factura(cod_concepto_factura, nro_factura, cod_publicacion, cantidad, sub_total)
+				VALUES(@cod_concepto_factura, @nro_factura, @cod_publicacion, @cantidad, @sub_total);
+			END;
+		
+		FETCH NEXT FROM cursor_detalles into @fecha_factura, @fecha_publicacion;
+	END;
+
+	CLOSE cursor_detalles;
+	DEALLOCATE cursor_detalles;
+END;
+
+GO
+
+-- trigger para que un envio no tenga fecha anterior a la venta
+CREATE or ALTER TRIGGER tr_check_fecha_envio ON PIZZA_VIERNES_UADE.envio
+INSTEAD OF insert, update AS
+BEGIN
+	DECLARE @fecha_venta datetime,
+			@fecha_programada date,
+			@hora_inicio decimal(18,0),
+			@hora_fin decimal(18,0),
+			@costo decimal(18,2),
+			@fecha_hora_entrega datetime,
+			@tipo nvarchar(50),
+			@cod_venta decimal(18,0),
+			@cod_domicilio decimal(18,0);
+
+	DECLARE cursor_envios CURSOR FOR
+		SELECT v.fecha_hora, fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, i.cod_venta, cod_domicilio FROM inserted i
+		JOIN venta v ON i.cod_venta=v.cod_venta;
+
+	OPEN cursor_envios;
+	FETCH NEXT FROM cursor_envios into @fecha_venta, @fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio;
+	
+	WHILE @@FETCH_STATUS=0
+	BEGIN
+		IF (@fecha_programada < @fecha_venta OR @fecha_hora_entrega < @fecha_venta)
+			BEGIN;
+				DECLARE @msg_error varchar;
+				SET @msg_error = 'La fecha programada o de entrega del envio es anterior a la fecha de la venta';
+				THROW 50001, @msg_error, 1;
+			END;
+		ELSE
+			BEGIN
+				INSERT INTO envio(fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, cod_venta, cod_domicilio)
+				VALUES(@fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio);
+			END;
+		
+		FETCH NEXT FROM cursor_detalles into @fecha_venta, @fecha_programada, @hora_inicio, @hora_fin, @costo, @fecha_hora_entrega, @tipo, @cod_venta, @cod_domicilio;
+	END;
+
+	CLOSE cursor_envios;
+	DEALLOCATE cursor_envios;
+END;
+
+GO
+
+CREATE or ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_todo AS
 BEGIN
 	-- MIGRACION DE PROVINCIAS
 	INSERT INTO PIZZA_VIERNES_UADE.provincia (nom_provincia)

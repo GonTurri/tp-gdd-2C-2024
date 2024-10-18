@@ -2,30 +2,30 @@ USE GD2C2024
 GO
 
 -- BORRAR DATOS
--- DELETE FROM [PIZZA_VIERNES_UADE].[detalle_factura]
--- DELETE FROM [PIZZA_VIERNES_UADE].[detalle_venta]
--- DELETE FROM [PIZZA_VIERNES_UADE].[publicacion]
--- DELETE FROM [PIZZA_VIERNES_UADE].[producto]
--- DELETE FROM [PIZZA_VIERNES_UADE].[subrubro]
--- DELETE FROM [PIZZA_VIERNES_UADE].[envio]
--- DELETE FROM [PIZZA_VIERNES_UADE].[detalle_pago]
--- DELETE FROM [PIZZA_VIERNES_UADE].[pago]
--- DELETE FROM [PIZZA_VIERNES_UADE].[venta]
--- DELETE FROM [PIZZA_VIERNES_UADE].[medio_pago]
--- DELETE FROM [PIZZA_VIERNES_UADE].[tipo_medio_pago]
--- DELETE FROM [PIZZA_VIERNES_UADE].[rubro]
--- DELETE FROM [PIZZA_VIERNES_UADE].[producto_marca]
--- DELETE FROM [PIZZA_VIERNES_UADE].[producto_modelo]
--- DELETE FROM [PIZZA_VIERNES_UADE].[concepto_factura]
--- DELETE FROM [PIZZA_VIERNES_UADE].[factura]
--- DELETE FROM [PIZZA_VIERNES_UADE].[domicilio]
--- DELETE FROM [PIZZA_VIERNES_UADE].[vendedor]
--- DELETE FROM [PIZZA_VIERNES_UADE].[cliente]
--- DELETE FROM [PIZZA_VIERNES_UADE].[usuario]
--- DELETE FROM [PIZZA_VIERNES_UADE].[almacen]
--- DELETE FROM [PIZZA_VIERNES_UADE].[localidad]
--- DELETE FROM [PIZZA_VIERNES_UADE].[provincia]
--- GO
+ DELETE FROM [PIZZA_VIERNES_UADE].[detalle_factura]
+ DELETE FROM [PIZZA_VIERNES_UADE].[detalle_venta]
+ DELETE FROM [PIZZA_VIERNES_UADE].[publicacion]
+ DELETE FROM [PIZZA_VIERNES_UADE].[producto]
+ DELETE FROM [PIZZA_VIERNES_UADE].[subrubro]
+ DELETE FROM [PIZZA_VIERNES_UADE].[envio]
+ DELETE FROM [PIZZA_VIERNES_UADE].[detalle_pago]
+ DELETE FROM [PIZZA_VIERNES_UADE].[pago]
+ DELETE FROM [PIZZA_VIERNES_UADE].[venta]
+ DELETE FROM [PIZZA_VIERNES_UADE].[medio_pago]
+ DELETE FROM [PIZZA_VIERNES_UADE].[tipo_medio_pago]
+ DELETE FROM [PIZZA_VIERNES_UADE].[rubro]
+ DELETE FROM [PIZZA_VIERNES_UADE].[producto_marca]
+ DELETE FROM [PIZZA_VIERNES_UADE].[producto_modelo]
+ DELETE FROM [PIZZA_VIERNES_UADE].[concepto_factura]
+ DELETE FROM [PIZZA_VIERNES_UADE].[factura]
+ DELETE FROM [PIZZA_VIERNES_UADE].[domicilio]
+ DELETE FROM [PIZZA_VIERNES_UADE].[vendedor]
+ DELETE FROM [PIZZA_VIERNES_UADE].[cliente]
+ DELETE FROM [PIZZA_VIERNES_UADE].[usuario]
+ DELETE FROM [PIZZA_VIERNES_UADE].[almacen]
+ DELETE FROM [PIZZA_VIERNES_UADE].[localidad]
+ DELETE FROM [PIZZA_VIERNES_UADE].[provincia]
+ GO
 
 -- borrar triggers
 
@@ -62,34 +62,3 @@ DROP PROCEDURE PIZZA_VIERNES_UADE.migrar_todo
 
 DROP SCHEMA [PIZZA_VIERNES_UADE]
 GO
-
-
--- USE [GD2C2021]
--- GO
-
--- DROP TRIGGER [BRAVO].[fecha_alta_camion]
--- DROP TRIGGER [BRAVO].[finalizar_orden_on_delete]
--- DROP TRIGGER [BRAVO].[actualizar_dias_reales_ejec]
--- GO
-
--- DROP TABLE [BRAVO].[tareas_x_orden_trabajo]
--- DROP TABLE [BRAVO].[materiales_x_tarea]
--- DROP TABLE [BRAVO].[tarea]
--- DROP TABLE [BRAVO].[material]
--- DROP TABLE [BRAVO].[viaje_x_tipos_paquete]
--- DROP TABLE [BRAVO].[tipo_paquete]
--- DROP TABLE [BRAVO].[mecanico]
--- DROP TABLE [BRAVO].[taller]
--- DROP TABLE [BRAVO].[viaje]
--- DROP TABLE [BRAVO].[chofer]
--- DROP TABLE [BRAVO].[recorrido]
--- DROP TABLE [BRAVO].[orden_trabajo]
--- DROP TABLE [BRAVO].[camion]
--- DROP TABLE [BRAVO].[modelo_camion]
--- GO
-
--- DROP PROCEDURE [BRAVO].[migrar_todo]
--- GO
-
--- DROP SCHEMA [BRAVO]
--- GO
