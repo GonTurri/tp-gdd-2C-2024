@@ -401,7 +401,14 @@ BEGIN
 	INNER JOIN gd_esquema.Maestra m ON  p.nom_provincia = m.ALMACEN_PROVINCIA AND l.nom_localidad = m.ALMACEN_Localidad
 	WHERE ALMACEN_CODIGO IS NOT NULL) sub
 
-	--MIGRACION DE 
+	--MIGRACION DE PRODUCTOS
+	INSERT INTO PIZZA_VIERNES_UADE.producto (cod_producto,cod_marca,cod_modelo,descripcion,precio,cod_subrubro) 
+	SELECT cod_producto,cod_marca,cod_modelo,prod_desc,precio,cod_subrubro FROM (
+		SELECT DISTINCT PRODUCTO_CODIGO as cod_producto ,cod_marca,PRODUCTO_MOD_CODIGO as cod_modelo ,PRODUCTO_DESCRIPCION as prod_desc,PRODUCTO_PRECIO as precio,
+		cod_subrubro FROM gd_esquema.Maestra mas INNER JOIN PIZZA_VIERNES_UADE.producto_marca m ON mas.PRODUCTO_MARCA = m.descripcion
+		INNER JOIN PIZZA_VIERNES_UADE.rubro r ON r.descripcion = mas.PRODUCTO_RUBRO_DESCRIPCION
+		INNER JOIN PIZZA_VIERNES_UADE.subrubro s ON (mas.PRODUCTO_SUB_RUBRO = s.descripcion AND s.cod_rubro = r.cod_rubro) WHERE PRODUCTO_CODIGO IS NOT NULL
+	) tmp
 
 END
 
