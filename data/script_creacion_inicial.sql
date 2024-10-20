@@ -409,6 +409,39 @@ BEGIN
 		INNER JOIN PIZZA_VIERNES_UADE.rubro r ON r.descripcion = mas.PRODUCTO_RUBRO_DESCRIPCION
 		INNER JOIN PIZZA_VIERNES_UADE.subrubro s ON (mas.PRODUCTO_SUB_RUBRO = s.descripcion AND s.cod_rubro = r.cod_rubro) WHERE PRODUCTO_CODIGO IS NOT NULL
 	) tmp
+	
+	-- MIGRACION DE USUARIOS - ESTO Y LA DE VENDEDORES SON PROVISORIAS, SOLO PARA PODER VER LO DE LAS PUBLICACIONES
+	INSERT INTO PIZZA_VIERNES_UADE.usuario(nombre, pass, fecha_creacion)
+	VALUES('nombre usuario', 'pass usuario', GETDATE());
+
+	-- MIGRACION DE VENDEDORES
+	INSERT INTO PIZZA_VIERNES_UADE.vendedor(cuit, mail, razon_social, cod_usuario)
+	SELECT distinct VENDEDOR_CUIT, VENDEDOR_MAIL, VENDEDOR_RAZON_SOCIAL, 1
+	FROM gd_esquema.Maestra where VENDEDOR_CUIT IS NOT NULL;
+
+	-- MIGRACION DE PUBLICACIONES
+	INSERT INTO PIZZA_VIERNES_UADE.publicacion(cod_publicacion, descripcion, stock, fecha_inicio, fecha_fin, precio, costo, porc_venta, cod_almacen, cod_vendedor, id_producto)
+	SELECT PUBLICACION_CODIGO, PUBLICACION_DESCRIPCION, PUBLICACION_STOCK, PUBLICACION_FECHA,
+			PUBLICACION_FECHA_V, PUBLICACION_PRECIO, PUBLICACION_COSTO, PUBLICACION_PORC_VENTA, cod_almacen, cod_vendedor, id_producto
+		FROM (
+			SELECT DISTINCT PUBLICACION_CODIGO, PUBLICACION_DESCRIPCION, PUBLICACION_STOCK, PUBLICACION_FECHA,
+			PUBLICACION_FECHA_V, PUBLICACION_PRECIO, PUBLICACION_COSTO, PUBLICACION_PORC_VENTA, cod_almacen, cod_vendedor, id_producto
+			FROM gd_esquema.Maestra mas
+			JOIN PIZZA_VIERNES_UADE.almacen a ON mas.ALMACEN_CODIGO = a.cod_almacen
+			JOIN PIZZA_VIERNES_UADE.vendedor v ON (
+				v.cuit = mas.VENDEDOR_CUIT AND
+				v.mail = mas.VENDEDOR_MAIL AND
+				v.razon_social = mas.VENDEDOR_RAZON_SOCIAL
+			)
+			JOIN PIZZA_VIERNES_UADE.producto_marca pma ON pma.descripcion = mas.PRODUCTO_MARCA
+			JOIN PIZZA_VIERNES_UADE.producto p ON (
+				p.cod_producto = mas.PRODUCTO_CODIGO AND
+				p.cod_modelo = mas.PRODUCTO_MOD_CODIGO AND
+				p.cod_marca = pma.cod_marca AND
+				p.precio = mas.PRODUCTO_PRECIO
+			)
+			WHERE PUBLICACION_CODIGO IS NOT NULL
+		) sub;
 
 END
 
