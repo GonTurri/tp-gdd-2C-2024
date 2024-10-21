@@ -263,9 +263,14 @@ CREATE TABLE
 		cod_concepto_factura decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.concepto_factura (cod_concepto_factura) NOT NULL,
 		nro_factura decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.factura (nro_factura) NOT NULL,
 		cod_publicacion decimal(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.publicacion (cod_publicacion) NOT NULL,
+		precio decimal (18,2) NOT NULL,
 		cantidad decimal(18, 0) NOT NULL,
 		sub_total decimal(18, 2) NOT NULL
 	);
+
+-- constraint para que no haya un detalle con precio negativo
+ALTER TABLE PIZZA_VIERNES_UADE.detalle_factura ADD CONSTRAINT detalle_fact_precio_negativo
+CHECK (precio >= 0);
 
 -- constraint para que no haya un detalle con cantidad negativa
 ALTER TABLE PIZZA_VIERNES_UADE.detalle_factura ADD CONSTRAINT detalle_fact_cant_negativo
@@ -432,7 +437,7 @@ BEGIN
 				v.cuit = mas.VENDEDOR_CUIT AND
 				v.mail = mas.VENDEDOR_MAIL AND
 				v.razon_social = mas.VENDEDOR_RAZON_SOCIAL
-			)
+			) -- REVISAR: capaz hace falta joinear con usuario tmbn
 			JOIN PIZZA_VIERNES_UADE.producto_marca pma ON pma.descripcion = mas.PRODUCTO_MARCA
 			JOIN PIZZA_VIERNES_UADE.producto p ON (
 				p.cod_producto = mas.PRODUCTO_CODIGO AND
@@ -442,6 +447,26 @@ BEGIN
 			)
 			WHERE PUBLICACION_CODIGO IS NOT NULL
 		) sub;
+	
+	--MIGRACION DE FACTURAS
+	INSERT INTO PIZZA_VIERNES_UADE.factura(nro_factura, fecha, total, cod_vendedor)
+	SELECT FACTURA_NUMERO, FACTURA_FECHA, FACTURA_TOTAL, cod_vendedor FROM (
+		SELECT DISTINCT FACTURA_NUMERO,FACTURA_FECHA, FACTURA_TOTAL, p.cod_vendedor
+		FROM gd_esquema.Maestra mas 
+		INNER JOIN PIZZA_VIERNES_UADE.publicacion p ON p.cod_publicacion = mas.PUBLICACION_CODIGO
+		WHERE FACTURA_NUMERO IS NOT NULL
+	) sub;
+
+	--MIGRACION DE DETALLES DE FACTURA
+	INSERT INTO PIZZA_VIERNES_UADE.detalle_factura(cod_concepto_factura, nro_factura, cod_publicacion, precio, cantidad, sub_total)
+	SELECT cod_concepto_factura, nro_factura, cod_publicacion, FACTURA_DET_PRECIO, FACTURA_DET_CANTIDAD, FACTURA_DET_SUBTOTAL FROM (
+		SELECT DISTINCT cp.cod_concepto_factura, f.nro_factura, p.cod_publicacion, mas.FACTURA_DET_PRECIO, mas.FACTURA_DET_CANTIDAD, mas.FACTURA_DET_SUBTOTAL
+		FROM gd_esquema.Maestra mas
+		INNER JOIN PIZZA_VIERNES_UADE.concepto_factura cp ON FACTURA_DET_TIPO = cp.concepto
+		INNER JOIN PIZZA_VIERNES_UADE.factura f ON FACTURA_NUMERO = f.nro_factura
+		INNER JOIN PIZZA_VIERNES_UADE.publicacion p ON mas.PUBLICACION_CODIGO = p.cod_publicacion
+		WHERE FACTURA_DET_PRECIO IS NOT NULL AND FACTURA_DET_CANTIDAD IS NOT NULL AND FACTURA_DET_SUBTOTAL IS NOT NULL
+	) sub;
 
 END
 
