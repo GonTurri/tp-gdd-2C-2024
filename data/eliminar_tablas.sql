@@ -56,6 +56,7 @@ DROP TABLE [PIZZA_VIERNES_UADE].[provincia]
 GO
 
 -- DROP PROCEDURES
+DROP PROCEDURE PIZZA_VIERNES_UADE.migrar_pagos;
 DROP PROCEDURE PIZZA_VIERNES_UADE.migrar_usuarios_clientes_y_domicilios;
 DROP PROCEDURE PIZZA_VIERNES_UADE.migrar_usuarios_vendedores_y_domicilios;
 DROP PROCEDURE PIZZA_VIERNES_UADE.migrar_todo;

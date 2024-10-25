@@ -139,6 +139,7 @@ CHECK (total >= 0);
 CREATE TABLE PIZZA_VIERNES_UADE.pago (
 	nro_pago decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	importe decimal(18,2) NOT NULL,
+	fecha date NOT NULL,
 	cod_venta decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.venta(cod_venta) NOT NULL,
 	cod_medio_pago decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.medio_pago(cod_medio_pago) NOT NULL
 );
@@ -310,7 +311,7 @@ AFTER insert, update AS
 BEGIN
 	DECLARE @cantidad_con_fecha_inconsistente INT;
 		SELECT  @cantidad_con_fecha_inconsistente =  COUNT(*) FROM inserted i
-		JOIN venta v ON i.cod_venta=v.cod_venta WHERE i.fecha_programada < v.fecha OR i.fecha_hora_entrega < v.fecha
+		JOIN venta v ON i.cod_venta=v.cod_venta WHERE i.fecha_programada < v.fecha_hora OR i.fecha_hora_entrega < v.fecha_hora
 	
 		IF (@cantidad_con_fecha_inconsistente >=1)
 			BEGIN
@@ -379,8 +380,12 @@ BEGIN
 	INNER JOIN PIZZA_VIERNES_UADE.localidad l  ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = CLI_USUARIO_DOMICILIO_LOCALIDAD
 	WHERE CLI_USUARIO_NOMBRE IS NOT NULL;
 
-	INSERT INTO PIZZA_VIERNES_UADE.usuario (nombre, pass, fecha_creacion) 
-	SELECT usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario ON;
+
+	INSERT INTO PIZZA_VIERNES_UADE.usuario (cod_usuario, nombre, pass, fecha_creacion) 
+	SELECT cod_usuario, usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+	
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario OFF;
 	
 	INSERT INTO PIZZA_VIERNES_UADE.cliente (nombre, apellido, fecha_nac, mail, dni, cod_usuario)
 	SELECT nombre, apellido, fecha_nac, mail, dni, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
@@ -401,7 +406,7 @@ BEGIN
 		razon_social nvarchar(50),
 		cuit nvarchar(50),
 		mail nvarchar(50),
-		cod_usuario decimal(18,0) IDENTITY(1,1),
+		cod_usuario decimal(18,0) IDENTITY,
 		usuario_nombre nvarchar(50),
 		usuario_pass nvarchar(50),
 		usuario_fecha_creacion date,
@@ -412,6 +417,13 @@ BEGIN
 		piso decimal(18,0),
 		cod_localidad decimal(18,0)
 	);
+
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.#tabla_temporal ON;
+
+	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal (cod_usuario) SELECT MAX(cod_usuario) FROM PIZZA_VIERNES_UADE.usuario;
+	DELETE FROM  PIZZA_VIERNES_UADE.#tabla_temporal;
+
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.#tabla_temporal OFF;
 
 	-- NO HAY CLIENTES Y VENDEDORES QUE COMPARTAN EL MISMO USUARIO EN LA MAESTRA POR LO TANTO INSERTAMOS NUEVOS USUARIOS
 	
@@ -429,8 +441,12 @@ BEGIN
 	INNER JOIN PIZZA_VIERNES_UADE.localidad l ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = VEN_USUARIO_DOMICILIO_LOCALIDAD
 	WHERE VEN_USUARIO_NOMBRE IS NOT NULL;
 
-	INSERT INTO PIZZA_VIERNES_UADE.usuario (nombre, pass, fecha_creacion) 
-	SELECT usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario ON;
+
+	INSERT INTO PIZZA_VIERNES_UADE.usuario (cod_usuario, nombre, pass, fecha_creacion) 
+	SELECT cod_usuario, usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario OFF;
 	
 	INSERT INTO PIZZA_VIERNES_UADE.vendedor(razon_social, cuit, mail, cod_usuario)
 	SELECT razon_social, cuit, mail, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
@@ -440,6 +456,41 @@ BEGIN
 
 	DROP TABLE PIZZA_VIERNES_UADE.#tabla_temporal
 
+END;
+
+GO
+
+CREATE or ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_pagos AS
+BEGIN
+	CREATE TABLE PIZZA_VIERNES_UADE.#tabla_temporal (
+		nro_pago decimal(18,0) IDENTITY(1,1),
+		importe decimal(18,2),
+		fecha date,
+		cod_venta decimal(18,0),
+		cod_medio_pago decimal(18,0),
+		nro_tarjeta nvarchar(50),
+		cant_cuotas decimal(18,0),
+		fecha_ven_tarjeta date
+	);
+
+	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal(importe, fecha, cod_venta, cod_medio_pago, nro_tarjeta, cant_cuotas, fecha_ven_tarjeta)
+	SELECT DISTINCT PAGO_IMPORTE, PAGO_FECHA, VENTA_CODIGO, mp.cod_medio_pago, PAGO_NRO_TARJETA, PAGO_CANT_CUOTAS, PAGO_FECHA_VENC_TARJETA
+	FROM gd_esquema.Maestra mas
+	JOIN PIZZA_VIERNES_UADE.tipo_medio_pago tm ON mas.PAGO_TIPO_MEDIO_PAGO = tm.descripcion
+	JOIN PIZZA_VIERNES_UADE.medio_pago mp ON mp.cod_tipo_medio_pago = tm.cod_tipo_medio_pago AND mp.medio = mas.PAGO_MEDIO_PAGO
+	WHERE PAGO_IMPORTE IS NOT NULL
+
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.pago ON
+
+	INSERT INTO PIZZA_VIERNES_UADE.pago(nro_pago, importe, fecha, cod_venta, cod_medio_pago)
+	SELECT nro_pago, importe, fecha, cod_venta, cod_medio_pago
+	FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+
+	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.pago OFF
+
+	INSERT INTO PIZZA_VIERNES_UADE.detalle_pago(nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas)
+	SELECT nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas
+	FROM PIZZA_VIERNES_UADE.#tabla_temporal;
 END;
 
 GO
@@ -570,6 +621,31 @@ BEGIN
 	INNER JOIN PIZZA_VIERNES_UADE.cliente c ON mas.CLIENTE_NOMBRE = c.nombre AND mas.CLIENTE_APELLIDO = c.apellido 
 	AND mas.CLIENTE_DNI = c.dni AND mas.CLIENTE_MAIL = c.mail AND mas.CLIENTE_FECHA_NAC = c.fecha_nac
 	WHERE VENTA_CODIGO IS NOT NULL;
+	
+	-- MIGRACION DE DETALLE VENTAS
+	INSERT INTO PIZZA_VIERNES_UADE.detalle_venta(cod_venta, cod_publicacion, detalle_cant, detalle_precio, detalle_sub_tot)
+	SELECT DISTINCT VENTA_CODIGO, PUBLICACION_CODIGO, VENTA_DET_CANT, VENTA_DET_PRECIO, VENTA_DET_SUB_TOTAL
+	FROM gd_esquema.Maestra
+	WHERE VENTA_CODIGO IS NOT NULL AND PUBLICACION_CODIGO IS NOT NULL;
+
+	-- MIGRACION DE PAGOS y DETALLES DE PAGOS
+	EXEC PIZZA_VIERNES_UADE.migrar_pagos;
+
+	-- MIGRACION DE ENVIOS
+	INSERT INTO PIZZA_VIERNES_UADE.envio (fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, cod_venta, cod_domicilio)
+	SELECT ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, ENVIO_TIPO, VENTA_CODIGO, d.cod_domicilio
+	FROM gd_esquema.Maestra mas
+	INNER JOIN PIZZA_VIERNES_UADE.provincia p  ON p.nom_provincia = mas.CLI_USUARIO_DOMICILIO_PROVINCIA
+	INNER JOIN PIZZA_VIERNES_UADE.localidad l  ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = CLI_USUARIO_DOMICILIO_LOCALIDAD
+	JOIN PIZZA_VIERNES_UADE.domicilio d ON (
+			mas.CLI_USUARIO_DOMICILIO_CALLE = d.calle
+			AND mas.CLI_USUARIO_DOMICILIO_CP = d.cp
+			AND mas.CLI_USUARIO_DOMICILIO_DEPTO = d.depto
+			AND mas.CLI_USUARIO_DOMICILIO_NRO_CALLE = d.nro_calle 
+			AND mas.CLI_USUARIO_DOMICILIO_PISO = d.piso
+			AND d.cod_localidad = l.cod_localidad
+	)
+	WHERE ENVIO_COSTO IS NOT NULL
 
 END
 
