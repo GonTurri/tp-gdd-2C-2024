@@ -345,15 +345,17 @@ END;
 
 GO
 
-CREATE or ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_usuarios_clientes_y_domicilios AS
+CREATE OR ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_usuarios_clientes_vendedores_y_domicilios AS
 BEGIN
-
 	CREATE TABLE PIZZA_VIERNES_UADE.#tabla_temporal (
 		nombre nvarchar(50),
 		apellido nvarchar(50),
 		fecha_nac DATE,
-		mail nvarchar(50),
+		cli_mail nvarchar(50),
 		dni decimal(18,0),
+		cuit nvarchar(50),
+		ven_mail nvarchar(50),
+		razon_social nvarchar(50),
 		cod_usuario decimal(18,0) IDENTITY(1,1),
 		usuario_nombre nvarchar(50),
 		usuario_pass nvarchar(50),
@@ -365,73 +367,21 @@ BEGIN
 		piso decimal(18,0),
 		cod_localidad decimal(18,0)
 	);
-	
-	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal (nombre, apellido, fecha_nac, mail, dni, 
-		usuario_nombre, usuario_pass, usuario_fecha_creacion, 
-		calle, cp, depto, nro_calle, piso, cod_localidad)
+
+	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal (nombre,	apellido, fecha_nac, cli_mail, dni, cuit, ven_mail, razon_social, usuario_nombre, usuario_pass, usuario_fecha_creacion, calle, cp, depto, nro_calle, piso, cod_localidad)
 	SELECT DISTINCT
-		CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI,
-		CLI_USUARIO_NOMBRE, CLI_USUARIO_PASS, CLI_USUARIO_FECHA_CREACION,
-		CLI_USUARIO_DOMICILIO_CALLE, CLI_USUARIO_DOMICILIO_CP,
-		CLI_USUARIO_DOMICILIO_DEPTO, CLI_USUARIO_DOMICILIO_NRO_CALLE, 
-		CLI_USUARIO_DOMICILIO_PISO, l.cod_localidad
+		CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_FECHA_NAC, CLIENTE_MAIL, CLIENTE_DNI, null as VENDEDOR_CUIT, null as VENDEDOR_MAIL, null as VENDEDOR_RAZON_SOCIAL,
+		CLI_USUARIO_NOMBRE as USUARIO_NOMBRE, CLI_USUARIO_PASS as USUARIO_PASS, CLI_USUARIO_FECHA_CREACION as USUARIO_FECHA_CREACION,
+		CLI_USUARIO_DOMICILIO_CALLE as DOMICILIO_CALLE, CLI_USUARIO_DOMICILIO_CP as DOMICILIO_CP,
+		CLI_USUARIO_DOMICILIO_DEPTO as DOMICILIO_DEPTO, CLI_USUARIO_DOMICILIO_NRO_CALLE as DOMICILIO_NRO_CALLE, 
+		CLI_USUARIO_DOMICILIO_PISO as DOMICILIO_PISO, l.cod_localidad
 	FROM gd_esquema.Maestra mas 
-	INNER JOIN PIZZA_VIERNES_UADE.provincia p  ON p.nom_provincia = mas.CLI_USUARIO_DOMICILIO_PROVINCIA
-	INNER JOIN PIZZA_VIERNES_UADE.localidad l  ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = CLI_USUARIO_DOMICILIO_LOCALIDAD
-	WHERE CLI_USUARIO_NOMBRE IS NOT NULL;
-
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario ON;
-
-	INSERT INTO PIZZA_VIERNES_UADE.usuario (cod_usuario, nombre, pass, fecha_creacion) 
-	SELECT cod_usuario, usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
-	
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario OFF;
-	
-	INSERT INTO PIZZA_VIERNES_UADE.cliente (nombre, apellido, fecha_nac, mail, dni, cod_usuario)
-	SELECT nombre, apellido, fecha_nac, mail, dni, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
-
-	INSERT INTO PIZZA_VIERNES_UADE.domicilio (calle, cp, depto, nro_calle, piso, cod_localidad, cod_usuario)
-	SELECT calle, cp, depto, nro_calle, piso, cod_localidad, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
-
-	DROP TABLE PIZZA_VIERNES_UADE.#tabla_temporal
-
-END;
-
-GO
-
-CREATE or ALTER PROCEDURE PIZZA_VIERNES_UADE.migrar_usuarios_vendedores_y_domicilios AS
-BEGIN
-
-	CREATE TABLE PIZZA_VIERNES_UADE.#tabla_temporal (
-		razon_social nvarchar(50),
-		cuit nvarchar(50),
-		mail nvarchar(50),
-		cod_usuario decimal(18,0) IDENTITY,
-		usuario_nombre nvarchar(50),
-		usuario_pass nvarchar(50),
-		usuario_fecha_creacion date,
-		calle nvarchar(50),
-		cp nvarchar(50),
-		depto nvarchar(50),
-		nro_calle decimal(18,0),
-		piso decimal(18,0),
-		cod_localidad decimal(18,0)
-	);
-
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.#tabla_temporal ON;
-
-	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal (cod_usuario) SELECT MAX(cod_usuario) FROM PIZZA_VIERNES_UADE.usuario;
-	DELETE FROM  PIZZA_VIERNES_UADE.#tabla_temporal;
-
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.#tabla_temporal OFF;
-
-	-- NO HAY CLIENTES Y VENDEDORES QUE COMPARTAN EL MISMO USUARIO EN LA MAESTRA POR LO TANTO INSERTAMOS NUEVOS USUARIOS
-	
-	INSERT INTO PIZZA_VIERNES_UADE.#tabla_temporal (razon_social, cuit, mail,
-		usuario_nombre, usuario_pass, usuario_fecha_creacion, 
-		calle, cp, depto, nro_calle, piso, cod_localidad)
+	INNER JOIN PIZZA_VIERNES_UADE.provincia p ON p.nom_provincia = mas.CLI_USUARIO_DOMICILIO_PROVINCIA
+	INNER JOIN PIZZA_VIERNES_UADE.localidad l ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = CLI_USUARIO_DOMICILIO_LOCALIDAD
+	WHERE CLI_USUARIO_NOMBRE IS NOT NULL
+	UNION
 	SELECT DISTINCT
-		VENDEDOR_RAZON_SOCIAL, VENDEDOR_CUIT, VENDEDOR_MAIL,
+		null , null, null, null, null, VENDEDOR_CUIT, VENDEDOR_MAIL, VENDEDOR_RAZON_SOCIAL,
 		VEN_USUARIO_NOMBRE, VEN_USUARIO_PASS, VEN_USUARIO_FECHA_CREACION,
 		VEN_USUARIO_DOMICILIO_CALLE, VEN_USUARIO_DOMICILIO_CP,
 		VEN_USUARIO_DOMICILIO_DEPTO, VEN_USUARIO_DOMICILIO_NRO_CALLE, 
@@ -439,18 +389,26 @@ BEGIN
 	FROM gd_esquema.Maestra mas 
 	INNER JOIN PIZZA_VIERNES_UADE.provincia p ON p.nom_provincia = mas.VEN_USUARIO_DOMICILIO_PROVINCIA
 	INNER JOIN PIZZA_VIERNES_UADE.localidad l ON l.cod_provincia = p.cod_provincia AND l.nom_localidad = VEN_USUARIO_DOMICILIO_LOCALIDAD
-	WHERE VEN_USUARIO_NOMBRE IS NOT NULL;
+	WHERE VEN_USUARIO_NOMBRE IS NOT NULL
 
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario ON;
+	-- MIGRACION DE USUARIOS
+	INSERT INTO PIZZA_VIERNES_UADE.usuario (nombre, pass, fecha_creacion) 
+	SELECT usuario_nombre,usuario_pass,usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal
+	ORDER BY cod_usuario
 
-	INSERT INTO PIZZA_VIERNES_UADE.usuario (cod_usuario, nombre, pass, fecha_creacion) 
-	SELECT cod_usuario, usuario_nombre, usuario_pass, usuario_fecha_creacion FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+	--MIGRACION DE CLIENTES
+	INSERT INTO PIZZA_VIERNES_UADE.cliente (nombre, apellido, fecha_nac, mail, dni, cod_usuario)
+	SELECT nombre, apellido, fecha_nac, cli_mail, dni, cod_usuario
+	FROM PIZZA_VIERNES_UADE.#tabla_temporal
+	WHERE razon_social IS NULL;
 
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.usuario OFF;
-	
+	-- MIGRACION DE VENDEDORES
 	INSERT INTO PIZZA_VIERNES_UADE.vendedor(razon_social, cuit, mail, cod_usuario)
-	SELECT razon_social, cuit, mail, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+	SELECT razon_social, cuit, ven_mail, cod_usuario
+	FROM PIZZA_VIERNES_UADE.#tabla_temporal
+	WHERE dni IS NULL;
 
+	-- MIGRACION DE DOMICILIOS
 	INSERT INTO PIZZA_VIERNES_UADE.domicilio (calle, cp, depto, nro_calle, piso, cod_localidad, cod_usuario)
 	SELECT calle, cp, depto, nro_calle, piso, cod_localidad, cod_usuario FROM PIZZA_VIERNES_UADE.#tabla_temporal;
 
@@ -480,13 +438,10 @@ BEGIN
 	JOIN PIZZA_VIERNES_UADE.medio_pago mp ON mp.cod_tipo_medio_pago = tm.cod_tipo_medio_pago AND mp.medio = mas.PAGO_MEDIO_PAGO
 	WHERE PAGO_IMPORTE IS NOT NULL
 
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.pago ON
-
-	INSERT INTO PIZZA_VIERNES_UADE.pago(nro_pago, importe, fecha, cod_venta, cod_medio_pago)
-	SELECT nro_pago, importe, fecha, cod_venta, cod_medio_pago
-	FROM PIZZA_VIERNES_UADE.#tabla_temporal;
-
-	SET IDENTITY_INSERT PIZZA_VIERNES_UADE.pago OFF
+	INSERT INTO PIZZA_VIERNES_UADE.pago(importe, fecha, cod_venta, cod_medio_pago)
+	SELECT importe, fecha, cod_venta, cod_medio_pago
+	FROM PIZZA_VIERNES_UADE.#tabla_temporal
+	ORDER BY nro_pago;
 
 	INSERT INTO PIZZA_VIERNES_UADE.detalle_pago(nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas)
 	SELECT nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas
@@ -565,11 +520,8 @@ BEGIN
 		INNER JOIN PIZZA_VIERNES_UADE.subrubro s ON (mas.PRODUCTO_SUB_RUBRO = s.descripcion AND s.cod_rubro = r.cod_rubro) WHERE PRODUCTO_CODIGO IS NOT NULL
 	) tmp
 
-	-- MIGRACION DE CLIENTES, USUARIOS DE CLIENTES Y DOMICILIOS DE CLIENTES
-	EXEC PIZZA_VIERNES_UADE.migrar_usuarios_clientes_y_domicilios;
-	
-	-- MIGRACION DE VENDEDORES, USUARIOS DE VENDEDORES Y DOMICILIOS DE VENDEDORES
-	EXEC PIZZA_VIERNES_UADE.migrar_usuarios_vendedores_y_domicilios;
+	-- MIGRACION DE USUARIOS, CLIENTES, VENDEDORES Y DOMICILIOS
+	EXEC PIZZA_VIERNES_UADE.migrar_usuarios_clientes_vendedores_y_domicilios;
 
 	-- MIGRACION DE PUBLICACIONES
 	INSERT INTO PIZZA_VIERNES_UADE.publicacion(cod_publicacion, descripcion, stock, fecha_inicio, fecha_fin, precio, costo, porc_venta, cod_almacen, cod_vendedor, id_producto)
