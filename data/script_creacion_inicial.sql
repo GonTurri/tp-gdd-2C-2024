@@ -446,6 +446,8 @@ BEGIN
 	INSERT INTO PIZZA_VIERNES_UADE.detalle_pago(nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas)
 	SELECT nro_pago, nro_tarjeta, fecha_ven_tarjeta, cant_cuotas
 	FROM PIZZA_VIERNES_UADE.#tabla_temporal;
+
+	DROP TABLE PIZZA_VIERNES_UADE.#tabla_temporal
 END;
 
 GO
@@ -583,6 +585,7 @@ BEGIN
 	-- MIGRACION DE PAGOS y DETALLES DE PAGOS
 	EXEC PIZZA_VIERNES_UADE.migrar_pagos;
 
+
 	-- MIGRACION DE ENVIOS
 	INSERT INTO PIZZA_VIERNES_UADE.envio (fecha_programada, hora_inicio, hora_fin, costo, fecha_hora_entrega, tipo, cod_venta, cod_domicilio)
 	SELECT ENVIO_FECHA_PROGAMADA, ENVIO_HORA_INICIO, ENVIO_HORA_FIN_INICIO, ENVIO_COSTO, ENVIO_FECHA_ENTREGA, ENVIO_TIPO, VENTA_CODIGO, d.cod_domicilio
@@ -597,9 +600,9 @@ BEGIN
 			AND mas.CLI_USUARIO_DOMICILIO_PISO = d.piso
 			AND d.cod_localidad = l.cod_localidad
 	)
-	WHERE ENVIO_COSTO IS NOT NULL
+	WHERE ENVIO_COSTO IS NOT NULL;
 
-END
+END;
 
 GO
 
