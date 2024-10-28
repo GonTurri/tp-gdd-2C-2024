@@ -70,8 +70,8 @@ CREATE TABLE PIZZA_VIERNES_UADE.domicilio (
 	cod_domicilio decimal(18,0) PRIMARY KEY IDENTITY(1,1) NOT NULL,
 	calle nvarchar(50) NOT NULL,
 	nro_calle decimal(18,0) NOT NULL,
-	piso decimal(18,0) NOT NULL,
-	depto nvarchar(50) NOT NULL,
+	piso decimal(18,0) NULL,
+	depto nvarchar(50) NULL,
 	cp nvarchar(50) NOT NULL,
 	cod_usuario decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.usuario(cod_usuario) NOT NULL,
 	cod_localidad decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.localidad(cod_localidad) NOT NULL
@@ -129,8 +129,6 @@ CREATE TABLE PIZZA_VIERNES_UADE.venta (
 	total decimal(18,2) NOT NULL,
 	cod_cliente decimal(18,0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.cliente(cod_cliente) NOT NULL
 );
-
--- TODO: GESTION DE VENTAS QUE PERTENECEN A OTROS VENDEDORES
 
 -- constraint para que no haya una venta con total negativo
 ALTER TABLE PIZZA_VIERNES_UADE.venta ADD CONSTRAINT venta_total_negativo
