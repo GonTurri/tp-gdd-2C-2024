@@ -55,23 +55,6 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_concepto_facturacion (
     tipo NVARCHAR(50)
 );
 
--- CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos (
---     tiempo_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tiempo(id) NOT NULL,
---     ubicacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_ubicacion(id) NOT NULL,
---     rubro_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_rubro(id) NOT NULL,
---     tipo_medio_pago_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tipo_medio_pago(id) NOT NULL,
---     rango_etario_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_rango_etario_clientes(id) NOT NULL,
---     tipo_envio_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tipo_envio(id) NOT NULL,
---     rango_horario_ventas_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_rango_horario_ventas(id) NOT NULL,
---     concepto_facturacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_concepto_facturacion(id) NOT NULL,
---     producto_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_producto(id) NOT NULL,
---     total_facturado DECIMAL(18,2),
---     costo_envio DECIMAL(18,2),
---     total_pagado DECIMAL(18,2),
---     PRIMARY KEY(tiempo_id, ubicacion_id, rubro_id, tipo_medio_pago_id, rango_etario_id,
---      tipo_envio_id, rango_horario_ventas_id, concepto_facturacion_id, producto_id)
--- );
-
 CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_facturacion (
     tiempo_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tiempo(id) NOT NULL,
     ubicacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_ubicacion(id) NOT NULL,
@@ -117,7 +100,7 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_publicaciones (
     tiempo_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tiempo(id) NOT NULL,
     ubicacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_ubicacion(id) NOT NULL,
     rubro_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_rubro(id) NOT NULL,
-    marca_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_marca(id) NOT NULL,
+    marca_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_marca(cod_marca) NOT NULL,
     publicacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_publicacion(cod_publicacion) NOT NULL,
     dias_vigencia_publicacion DECIMAL(18,0),
     stock_inicial DECIMAL(18,0)
@@ -140,7 +123,7 @@ BEGIN
 
     DECLARE @id_rango INT;
     SET @id_rango = CASE WHEN @edad < 25 THEN 1
-                         WHEN @edad >= 25 AND @edad <= 35 THEN 2
+                         WHEN @edad BETWEEN 25 AND 35 THEN 2 
                          WHEN @edad > 35 AND @edad <= 50 THEN 3
                          WHEN @edad > 50 THEN 4
                     END;
@@ -153,34 +136,62 @@ CREATE FUNCTION PIZZA_VIERNES_UADE.get_rango_horario (@horario DATE) RETURNS INT
 BEGIN
     DECLARE @hora INT;
 
-    SET @edad = HOUR(@@horario)
+    SET @hora = DATEPART(HOUR, @horario)
 
     DECLARE @id_rango INT;
-    SET @id_rango = CASE WHEN @edad < 25 THEN 1
-                         WHEN @edad >= 25 AND @edad <= 35 THEN 2
-                         WHEN @edad > 35 AND @edad <= 50 THEN 3
-                         WHEN @edad > 50 THEN 4
+    SET @id_rango = CASE WHEN @hora >= 0 AND @hora < 6 THEN 1
+                         WHEN @hora >= 6 AND @hora < 12 THEN 2
+                         WHEN @hora >= 12 AND @hora < 18 THEN 3
+                         WHEN @hora BETWEEN 18 AND 24 THEN 4
                     END;
     RETURN @id_rango
+END
+
+GO
+
+CREATE FUNCTION PIZZA_VIERNES_UADE.get_cuatrimestre (@fecha DATE) RETURNS INT AS
+BEGIN
+    DECLARE @cuatrimestre INTEGER,
+            @mes INTEGER;
+
+    SET @mes = MONTH(@fecha);
+
+    SET @cuatrimestre = CASE WHEN @mes BETWEEN 1 AND 4 THEN 1
+                             WHEN @mes BETWEEN 5 AND 8 THEN 2
+                             WHEN @mes BETWEEN 9 AND 12 THEN 3
+                        END;
+                        
+    RETURN @cuatrimestre;
+END
+
+CREATE FUNCTION PIZZA_VIERNES_UADE.get_tiempo (@fecha DATE) RETURNS INT AS
+BEGIN
+    DECLARE @tiempo_id INTEGER;
+
+    SET @tiempo_id = SELECT id FROM PIZZA_VIERNES_UADE.BI_tiempo
+                        WHERE anio = YEAR(@fecha) AND mes = MONTH(@fecha);
+                        
+    RETURN @tiempo_id;
 END
 
 -- MIGRACION DE TABLAS
 
 GO 
 
-CREATE OR ALTER PROCEDURE BI_llenar_dimensiones AS 
-BEGIN 
+CREATE OR ALTER PROCEDURE PIZZA_VIERNES_UADE.BI_llenar_dimensiones AS 
+BEGIN
+
     -- LLENADO DE DIMENSION PUBLICACION
     INSERT INTO PIZZA_VIERNES_UADE.BI_publicacion (cod_publicacion)
     SELECT DISTINCT cod_publicacion FROM PIZZA_VIERNES_UADE.publicacion;
 
     -- LLENADO DE DIMENSION ENVIO
     INSERT INTO PIZZA_VIERNES_UADE.BI_envio (id)
-    SELECT DISTINCT envio_id FROM PIZZA_VIERNES_UADE.envio
+    SELECT DISTINCT nro_envio FROM PIZZA_VIERNES_UADE.envio
 
     -- LLENADO DE DIMENSION MARCA
     INSERT INTO PIZZA_VIERNES_UADE.BI_marca (cod_marca, marca)
-    SELECT DISTINCT cod_marca, marca FROM PIZZA_VIERNES_UADE.marca;
+    SELECT DISTINCT cod_marca, descripcion FROM PIZZA_VIERNES_UADE.producto_marca;
 
     -- LLENADO DE DIMENSION TIPO ENVIO
     INSERT INTO PIZZA_VIERNES_UADE.BI_tipo_envio (tipo)
@@ -196,7 +207,8 @@ BEGIN
 
     -- LLENADO DE DIMENSION RUBRO
     INSERT INTO PIZZA_VIERNES_UADE.BI_rubro (rubro, subrubro)
-    SELECT DISTINCT r.descripcion, s.descripcion FROM PIZZA_VIERNES_UADE.subrubro s 
+    SELECT DISTINCT r.descripcion, s.descripcion 
+    FROM PIZZA_VIERNES_UADE.subrubro s 
     JOIN PIZZA_VIERNES_UADE.rubro r ON s.cod_rubro = r.cod_rubro
     
     -- LLENADO DE DIMENSION RANGO ETARIO CLIENTES
@@ -209,14 +221,30 @@ BEGIN
     
     -- LLENADO DE DIMENSION UBICACION
     INSERT INTO PIZZA_VIERNES_UADE.BI_ubicacion (provincia, localidad)
-    SELECT DISTINCT l.localidad, p.provincia FROM PIZZA_VIERNES_UADE.localida
+    SELECT DISTINCT l.nom_localidad, p.nom_provincia
+    FROM PIZZA_VIERNES_UADE.localidad l
+    JOIN PIZZA_VIERNES_UADE.provincia p ON p.cod_provincia = l.cod_provincia
+
     -- LLENADO DE DIMENSION TIEMPO
     INSERT INTO PIZZA_VIERNES_UADE.BI_tiempo (anio,cuatrimestre,mes)
     (
-        SELECT DISTINCT  YEAR(fecha_inicio), PIZZA_VIERNES_UADE.get_cuatrimestre(fecha_inicio), 
-        MONTH(fecha_inicio)  FROM PIZZA_VIERNES_UADE.publicacion
+        SELECT DISTINCT YEAR(fecha_inicio), PIZZA_VIERNES_UADE.get_cuatrimestre(fecha_inicio), 
+        MONTH(fecha_inicio) FROM PIZZA_VIERNES_UADE.publicacion
 
-        UNION SELECT 
+        UNION SELECT DISTINCT YEAR(fecha_hora),PIZZA_VIERNES_UADE.get_cuatrimestre(fecha_hora),
+        MONTH(fecha_hora) FROM PIZZA_VIERNES_UADE.venta
 
+        UNION SELECT DISTINCT YEAR(fecha),PIZZA_VIERNES_UADE.get_cuatrimestre(fecha),
+        MONTH(fecha) FROM PIZZA_VIERNES_UADE.pago
+
+        UNION SELECT DISTINCT YEAR(fecha),PIZZA_VIERNES_UADE.get_cuatrimestre(fecha),
+        MONTH(fecha) FROM PIZZA_VIERNES_UADE.factura
+
+        UNION SELECT DISTINCT YEAR(fecha_hora_entrega),PIZZA_VIERNES_UADE.get_cuatrimestre(fecha_hora_entrega),
+        MONTH(fecha_hora_entrega) FROM PIZZA_VIERNES_UADE.envio
     )
 END
+
+GO 
+
+EXEC PIZZA_VIERNES_UADE.BI_llenar_dimensiones;
