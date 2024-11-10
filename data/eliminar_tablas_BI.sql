@@ -1,4 +1,10 @@
 -- DROP VIEWS
+
+DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones;
+DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_stock_inicial;
+DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_mensual_ventas;
+DROP VIEW PIZZA_VIERNES_UADE.BI_rendimiento_rubros;
+
 -- DROP TABLES
 
 DROP TABLE PIZZA_VIERNES_UADE.BI_hechos_facturacion;
