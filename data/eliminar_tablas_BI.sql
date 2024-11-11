@@ -4,6 +4,12 @@ DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones;
 DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_stock_inicial;
 DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_mensual_ventas;
 DROP VIEW PIZZA_VIERNES_UADE.BI_rendimiento_rubros;
+DROP VIEW PIZZA_VIERNES_UADE.BI_volumen_ventas;
+DROP VIEW PIZZA_VIERNES_UADE.BI_pagos_en_cuotas;
+DROP VIEW PIZZA_VIERNES_UADE.BI_porc_cumplimiento_envios;
+DROP VIEW PIZZA_VIERNES_UADE.BI_cinco_localidades_mayor_costo_envio;
+DROP VIEW PIZZA_VIERNES_UADE.BI_porc_facturacion_x_concepto
+DROP VIEW PIZZA_VIERNES_UADE.BI_facturacion_por_provincia
 
 -- DROP TABLES
 
