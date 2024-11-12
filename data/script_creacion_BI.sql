@@ -1,3 +1,5 @@
+--
+
 CREATE TABLE PIZZA_VIERNES_UADE.BI_tiempo (
     id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
     anio DECIMAL(18,0),
@@ -105,10 +107,6 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_publicaciones (
     PRIMARY KEY(tiempo_id, rubro_id,marca_id,publicacion_id)
 );
 
--- CREACION DE VISTAS ?? 
-
-
-
 -- CREACION DE FUNCIONES AUXILIARES
 
 GO
@@ -200,6 +198,7 @@ END;
 
 GO 
 
+-- LLENADO DE DIMENSIONES
 CREATE OR ALTER PROCEDURE PIZZA_VIERNES_UADE.BI_llenar_dimensiones AS 
 BEGIN
 
@@ -269,6 +268,7 @@ END
 
 GO 
 
+-- LLENADO DE HECHOS
 CREATE OR ALTER PROCEDURE PIZZA_VIERNES_UADE.BI_llenar_hechos AS
 BEGIN
 
@@ -368,153 +368,120 @@ GO
 --CREACION DE VISTAS
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones AS 
-SELECT  r.rubro,r.subrubro, t.cuatrimestre, t.anio, AVG(dias_vigencia_publicacion) as tiempo_promedio_vigente
+SELECT r.rubro, r.subrubro, t.cuatrimestre, t.anio, AVG(dias_vigencia_publicacion) as tiempo_promedio_vigente
 FROM PIZZA_VIERNES_UADE.BI_hechos_publicaciones p
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r ON r.id = p.rubro_id
-GROUP BY  r.rubro, r.subrubro, t.cuatrimestre, t.anio
+GROUP BY r.rubro, r.subrubro, t.cuatrimestre, t.anio
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_stock_inicial AS 
-SELECT   m.marca,t.anio, AVG(stock_inicial) as stock_promedio
+SELECT m.marca,t.anio, AVG(stock_inicial) as stock_promedio
 FROM PIZZA_VIERNES_UADE.BI_hechos_publicaciones p
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_marca m ON m.cod_marca = p.marca_id
-GROUP BY   m.marca,t.anio
+GROUP BY m.marca, t.anio
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_mensual_ventas AS 
-SELECT  u.provincia,t.mes,t.anio,AVG(valor_ventas) as valor_ventas_promedio
+SELECT u.provincia, t.mes, t.anio, AVG(valor_ventas) as valor_ventas_promedio
 FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = v.ubicacion_almacenes_id
-GROUP BY  u.provincia,t.mes,t.anio
+GROUP BY u.provincia, t.mes, t.anio
 
-
-GO 
-
-
--- CREATE VIEW PIZZA_VIERNES_UADE.BI_rendimiento_rubros AS 
--- SELECT  u.localidad,t.cuatrimestre,t.anio, rec.rango, r.rubro, SUM(valor_ventas) as ventas_totales
---     FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v 
---     INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
---     INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = v.ubicacion_clientes_id
---     INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r ON r.id = v.rubro_id
---     INNER JOIN PIZZA_VIERNES_UADE.BI_rango_etario_clientes rec ON rec.id = v.rango_etario_id
---     WHERE r.id IN (
---         SELECT TOP 5 r1.id 
---         FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v1 
---         INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t1 ON t1.id = v1.tiempo_id
---         INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u1 ON u1.id = v1.ubicacion_clientes_id
---         INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r1 ON r1.id = v1.rubro_id
---         INNER JOIN PIZZA_VIERNES_UADE.BI_rango_etario_clientes rec1 ON rec1.id = v1.rango_etario_id
---         WHERE u1.id = u.id AND t1.id = t.id AND rec1.id = rec.id
---         GROUP BY r1.id
---         ORDER BY SUM(valor_ventas)
---     )
---     GROUP BY u.localidad,t.cuatrimestre,t.anio, rec.rango, r.rubro
+GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_rendimiento_rubros AS 
-    SELECT 
-        tmp.provincia,tmp.localidad,tmp.cuatrimestre,tmp.anio,tmp.rango,tmp.rubro,tmp.ventas_totales,tmp.ranking
+    SELECT tmp.provincia, tmp.localidad, tmp.cuatrimestre, tmp.anio, tmp.rango, tmp.rubro, tmp.ventas_totales, tmp.ranking
     FROM (
-        SELECT 
-             u.provincia,u.localidad,t.cuatrimestre,t.anio,rec.rango,r.rubro,
+        SELECT u.provincia,u.localidad,t.cuatrimestre,t.anio,rec.rango,r.rubro,
             SUM(v.valor_ventas) AS ventas_totales,
             ROW_NUMBER() OVER (
-                PARTITION BY u.provincia,u.localidad, t.cuatrimestre, t.anio, rec.rango
+                PARTITION BY u.provincia, u.localidad, t.cuatrimestre, t.anio, rec.rango
                 ORDER BY SUM(v.valor_ventas) DESC
             ) AS ranking
-        FROM 
-            PIZZA_VIERNES_UADE.BI_hechos_ventas v
-        INNER JOIN 
-            PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
-        INNER JOIN 
-            PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = v.ubicacion_clientes_id
-        INNER JOIN 
-            PIZZA_VIERNES_UADE.BI_rango_etario_clientes rec ON rec.id = v.rango_etario_id
-        INNER JOIN 
-            PIZZA_VIERNES_UADE.BI_rubro r ON r.id = v.rubro_id
-        GROUP BY 
-           u.provincia, u.localidad, t.cuatrimestre, t.anio, rec.rango, r.rubro
+        FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v
+        INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
+        INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = v.ubicacion_clientes_id
+        INNER JOIN PIZZA_VIERNES_UADE.BI_rango_etario_clientes rec ON rec.id = v.rango_etario_id
+        INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r ON r.id = v.rubro_id
+        GROUP BY u.provincia, u.localidad, t.cuatrimestre, t.anio, rec.rango, r.rubro
     ) AS tmp
-    WHERE 
-        ranking <= 5
-    -- ORDER BY tmp.localidad,
-        -- tmp.anio,
-        -- tmp.cuatrimestre,
-        -- tmp.rango,
-        -- tmp.ventas_totales DESC,
-        -- tmp.ranking ASC
-
-        -- NO ME DEJA PONER ESTE ORDER BY EN LA VIEW LA REPUTISIMA QUE LO PARIO
+    WHERE ranking <= 5
 GO 
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_volumen_ventas AS 
-SELECT t.anio,t.mes,r.rango, SUM(cantidad_ventas) AS volumen_ventas
+SELECT t.anio, t.mes, r.rango, SUM(cantidad_ventas) AS volumen_ventas
 FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v
-INNER JOIN  PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
-INNER JOIN  PIZZA_VIERNES_UADE.BI_rango_horario_ventas r ON r.id = rango_horario_ventas_id
-GROUP BY t.anio,t.mes,r.rango
+INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
+INNER JOIN PIZZA_VIERNES_UADE.BI_rango_horario_ventas r ON r.id = rango_horario_ventas_id
+GROUP BY t.anio, t.mes, r.rango
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_pagos_en_cuotas AS 
-SELECT tmp.anio,tmp.mes,tmp.descripcion,tmp.provincia,tmp.localidad,tmp.total_pagos_en_cuotas, tmp.ranking 
+SELECT tmp.anio, tmp.mes, tmp.descripcion, tmp.provincia, tmp.localidad, tmp.total_pagos_en_cuotas, tmp.ranking 
 FROM (
-    SELECT t.anio,t.mes,mp.descripcion,u.provincia,u.localidad, SUM(total_pagos_en_cuotas) AS total_pagos_en_cuotas,
+    SELECT t.anio, t.mes, mp.descripcion, u.provincia, u.localidad, 
+        SUM(total_pagos_en_cuotas) AS total_pagos_en_cuotas,
         ROW_NUMBER() OVER (
-                    PARTITION BY t.anio,t.mes,mp.descripcion
-                    ORDER BY SUM(p.total_pagos_en_cuotas) DESC
-                ) AS ranking
+            PARTITION BY t.anio,t.mes,mp.descripcion
+            ORDER BY SUM(p.total_pagos_en_cuotas) DESC
+        ) AS ranking
     FROM PIZZA_VIERNES_UADE.BI_hechos_pagos p
-    INNER JOIN  PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
-    INNER JOIN  PIZZA_VIERNES_UADE.BI_tipo_medio_pago mp ON mp.id = p.tipo_medio_pago_id
+    INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
+    INNER JOIN PIZZA_VIERNES_UADE.BI_tipo_medio_pago mp ON mp.id = p.tipo_medio_pago_id
     INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = p.ubicacion_id
-    GROUP BY t.anio,t.mes,mp.descripcion,u.provincia,u.localidad
+    GROUP BY t.anio, t.mes, mp.descripcion, u.provincia, u.localidad
 ) AS tmp
 WHERE tmp.ranking <= 3 
 
 GO 
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_porc_cumplimiento_envios AS 
-SELECT u.provincia,t.anio, t.mes, 
-CAST(
-    COUNT(CASE WHEN e.estado = 'C' THEN 1 END) * 100.0 / COUNT(*) AS decimal(18,2)) AS porc_cumplimiento 
-    FROM PIZZA_VIERNES_UADE.BI_hechos_envios e 
-    INNER JOIN  PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = e.tiempo_id
-    INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = e.ubicacion_almacenes_id
-    GROUP BY u.provincia,t.anio, t.mes
+SELECT u.provincia, t.anio, t.mes, 
+    CAST(
+        COUNT(CASE WHEN e.estado = 'C' THEN 1 END) * 100.0 / COUNT(*) 
+    AS decimal(18,2)) AS porc_cumplimiento
+FROM PIZZA_VIERNES_UADE.BI_hechos_envios e 
+INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = e.tiempo_id
+INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = e.ubicacion_almacenes_id
+GROUP BY u.provincia, t.anio, t.mes
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_cinco_localidades_mayor_costo_envio AS 
-SELECT TOP 5 u.provincia,u.localidad,AVG(e.costo_envio) as costo_promedio_envio
+SELECT TOP 5 u.provincia, u.localidad, AVG(e.costo_envio) as costo_promedio_envio
 FROM PIZZA_VIERNES_UADE.BI_hechos_envios e 
-    INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = e.ubicacion_cliente_id
-    GROUP BY u.provincia,u.localidad
-    ORDER BY costo_promedio_envio DESC
+INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = e.ubicacion_cliente_id
+GROUP BY u.provincia, u.localidad
+ORDER BY costo_promedio_envio DESC
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_porc_facturacion_x_concepto AS 
-SELECT t.anio,t.mes,c.tipo, CAST((SUM(total_facturado)/aux.total_periodo * 100) AS DECIMAL(18,2)) as porcentaje_fact_x_concepto  FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion f 
-INNER JOIN  PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = f.tiempo_id
-INNER JOIN  PIZZA_VIERNES_UADE.BI_concepto_facturacion c ON c.id = f.concepto_facturacion_id
+SELECT t.anio, t.mes, c.tipo, 
+    CAST(
+        (SUM(total_facturado)/aux.total_periodo * 100) 
+    AS DECIMAL(18,2)) as porcentaje_fact_x_concepto
+FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion f 
+INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = f.tiempo_id
+INNER JOIN PIZZA_VIERNES_UADE.BI_concepto_facturacion c ON c.id = f.concepto_facturacion_id
 INNER JOIN (
-    SELECT tiempo_id,SUM(total_facturado) as total_periodo FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion
+    SELECT tiempo_id, SUM(total_facturado) as total_periodo 
+    FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion
     GROUP BY tiempo_id
 ) AS aux ON aux.tiempo_id = t.id
-GROUP BY t.anio,t.mes,c.tipo,total_periodo
-
+GROUP BY t.anio, t.mes, c.tipo, total_periodo
 
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_facturacion_por_provincia AS 
-SELECT u.provincia,t.anio,t.cuatrimestre, SUM(total_facturado) as monto_facturado FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion f 
-INNER JOIN  PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = f.tiempo_id
-INNER JOIN  PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = f.ubicacion_id
-GROUP BY u.provincia,t.anio,t.cuatrimestre
-
+SELECT u.provincia, t.anio, t.cuatrimestre, SUM(total_facturado) as monto_facturado 
+FROM PIZZA_VIERNES_UADE.BI_hechos_facturacion f 
+INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = f.tiempo_id
+INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = f.ubicacion_id
+GROUP BY u.provincia, t.anio, t.cuatrimestre
