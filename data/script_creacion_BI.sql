@@ -203,10 +203,6 @@ BEGIN
     INSERT INTO PIZZA_VIERNES_UADE.BI_publicacion (cod_publicacion)
     SELECT DISTINCT cod_publicacion FROM PIZZA_VIERNES_UADE.publicacion;
 
-    -- LLENADO DE DIMENSION ENVIO
-    --INSERT INTO PIZZA_VIERNES_UADE.BI_envio (id)
-    --SELECT DISTINCT nro_envio FROM PIZZA_VIERNES_UADE.envio
-
     -- LLENADO DE DIMENSION MARCA
     INSERT INTO PIZZA_VIERNES_UADE.BI_marca (cod_marca, marca)
     SELECT DISTINCT cod_marca, descripcion FROM PIZZA_VIERNES_UADE.producto_marca;
@@ -370,7 +366,7 @@ GO
 --CREACION DE VISTAS
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones AS 
-SELECT r.rubro, r.subrubro, t.cuatrimestre, t.anio, AVG(dias_vigencia_publicacion) as tiempo_promedio_vigente
+SELECT r.rubro, r.subrubro, t.cuatrimestre, t.anio, CAST(AVG(dias_vigencia_publicacion) AS decimal(18,2)) as tiempo_promedio_vigente
 FROM PIZZA_VIERNES_UADE.BI_hechos_publicaciones p
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r ON r.id = p.rubro_id
