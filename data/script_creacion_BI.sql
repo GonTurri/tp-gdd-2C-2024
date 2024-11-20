@@ -1,4 +1,5 @@
---
+USE GD2C2024;
+GO
 
 CREATE TABLE PIZZA_VIERNES_UADE.BI_tiempo (
     id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
@@ -48,10 +49,6 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_tipo_envio (
     tipo NVARCHAR(50)
 );
 
-CREATE TABLE PIZZA_VIERNES_UADE.BI_envio (
-    id DECIMAL(18,0) PRIMARY KEY
-);
-
 CREATE TABLE PIZZA_VIERNES_UADE.BI_concepto_facturacion (
     id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
     tipo NVARCHAR(50)
@@ -70,10 +67,10 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_envios (
     ubicacion_cliente_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_ubicacion(id) NOT NULL,
     ubicacion_almacenes_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_ubicacion(id) NOT NULL,
     tipo_envio_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tipo_envio(id) NOT NULL,
-    envio_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_envio(id) NOT NULL,
-    estado CHAR(1), -- 'C' para cumplido 'N' para NO cumplido
-    costo_envio DECIMAL(18,2)
-    PRIMARY KEY(tiempo_id, ubicacion_cliente_id, tipo_envio_id,envio_id)
+	costo_total_envios DECIMAL(18,2),
+	cant_envios_cumplidos DECIMAL(18,0),
+	cant_envios_totales DECIMAL(18,0),
+    PRIMARY KEY(tiempo_id, ubicacion_cliente_id, ubicacion_almacenes_id, tipo_envio_id)
 );
 
 CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_pagos (
@@ -207,8 +204,8 @@ BEGIN
     SELECT DISTINCT cod_publicacion FROM PIZZA_VIERNES_UADE.publicacion;
 
     -- LLENADO DE DIMENSION ENVIO
-    INSERT INTO PIZZA_VIERNES_UADE.BI_envio (id)
-    SELECT DISTINCT nro_envio FROM PIZZA_VIERNES_UADE.envio
+    --INSERT INTO PIZZA_VIERNES_UADE.BI_envio (id)
+    --SELECT DISTINCT nro_envio FROM PIZZA_VIERNES_UADE.envio
 
     -- LLENADO DE DIMENSION MARCA
     INSERT INTO PIZZA_VIERNES_UADE.BI_marca (cod_marca, marca)
@@ -338,12 +335,16 @@ BEGIN
     INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion ucli ON ucli.provincia = pc.nom_provincia AND ucli.localidad = lc.nom_localidad --ubicacion cliente
     GROUP BY PIZZA_VIERNES_UADE.get_tiempo(v.fecha_hora), ual.id, br.id, PIZZA_VIERNES_UADE.get_rango_edad(c.fecha_nac), ucli.id, PIZZA_VIERNES_UADE.get_rango_horario(v.fecha_hora)
 
-    -- LLENADO DE HECHOS DE ENVIO ('C' -> Cumplido - 'N' -> No cumplido)
-    INSERT INTO PIZZA_VIERNES_UADE.BI_hechos_envios (tiempo_id, ubicacion_cliente_id,ubicacion_almacenes_id, tipo_envio_id, envio_id, estado, costo_envio)
-    SELECT PIZZA_VIERNES_UADE.get_tiempo(e.fecha_hora_entrega), u.id,u1.id, bte.id, be.id,
-            PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega), e.costo
+    -- LLENADO DE HECHOS DE ENVIO
+    INSERT INTO PIZZA_VIERNES_UADE.BI_hechos_envios (tiempo_id, ubicacion_cliente_id, ubicacion_almacenes_id, tipo_envio_id,
+		costo_total_envios,
+		cant_envios_cumplidos,
+		cant_envios_totales)
+    SELECT PIZZA_VIERNES_UADE.get_tiempo(e.fecha_hora_entrega), u.id,u1.id, bte.id,
+        SUM(e.costo),
+        COUNT(CASE WHEN PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega) = 'C' THEN 1 END),
+        COUNT(*)
     FROM PIZZA_VIERNES_UADE.envio e
-    INNER JOIN PIZZA_VIERNES_UADE.BI_envio be ON be.id = e.nro_envio
     INNER JOIN PIZZA_VIERNES_UADE.BI_tipo_envio bte ON bte.tipo = e.tipo
     INNER JOIN PIZZA_VIERNES_UADE.domicilio d ON d.cod_domicilio = e.cod_domicilio
     INNER JOIN PIZZA_VIERNES_UADE.localidad l ON l.cod_localidad = d.cod_localidad  
@@ -356,6 +357,7 @@ BEGIN
     INNER JOIN PIZZA_VIERNES_UADE.localidad l2 ON l2.cod_localidad = a.cod_localidad
     INNER JOIN PIZZA_VIERNES_UADE.provincia p2 ON p2.cod_provincia = l2.cod_provincia
     INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u1 ON u1.provincia = p2.nom_provincia AND u1.localidad = l2.nom_localidad
+    GROUP BY PIZZA_VIERNES_UADE.get_tiempo(e.fecha_hora_entrega), u.id, u1.id, bte.id;
 END
 
 GO
@@ -444,7 +446,7 @@ GO
 CREATE VIEW PIZZA_VIERNES_UADE.BI_porc_cumplimiento_envios AS 
 SELECT u.provincia, t.anio, t.mes, 
     CAST(
-        COUNT(CASE WHEN e.estado = 'C' THEN 1 END) * 100.0 / COUNT(*) 
+        SUM(e.cant_envios_cumplidos) * 100.0 / SUM(e.cant_envios_totales)
     AS decimal(18,2)) AS porc_cumplimiento
 FROM PIZZA_VIERNES_UADE.BI_hechos_envios e 
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = e.tiempo_id
@@ -454,11 +456,11 @@ GROUP BY u.provincia, t.anio, t.mes
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_cinco_localidades_mayor_costo_envio AS 
-SELECT TOP 5 u.provincia, u.localidad, AVG(e.costo_envio) as costo_promedio_envio
+SELECT TOP 5 u.provincia, u.localidad, SUM(e.costo_total_envios) as costo_total_envio
 FROM PIZZA_VIERNES_UADE.BI_hechos_envios e 
 INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = e.ubicacion_cliente_id
 GROUP BY u.provincia, u.localidad
-ORDER BY costo_promedio_envio DESC
+ORDER BY costo_total_envio DESC
 
 GO
 

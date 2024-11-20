@@ -1,3 +1,5 @@
+USE GD2C2024;
+GO
 -- DROP VIEWS
 
 DROP VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones;
