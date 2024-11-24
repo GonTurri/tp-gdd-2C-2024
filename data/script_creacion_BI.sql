@@ -25,10 +25,6 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_rubro (
     subrubro NVARCHAR(50)
 );
 
-CREATE TABLE PIZZA_VIERNES_UADE.BI_publicacion (
-    cod_publicacion DECIMAL(18,0) PRIMARY KEY
-);
-
 CREATE TABLE PIZZA_VIERNES_UADE.BI_tipo_medio_pago (
     id DECIMAL(18,0) PRIMARY KEY IDENTITY(1,1),
     descripcion NVARCHAR(50),
@@ -98,10 +94,10 @@ CREATE TABLE PIZZA_VIERNES_UADE.BI_hechos_publicaciones (
     tiempo_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_tiempo(id) NOT NULL,
     rubro_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_rubro(id) NOT NULL,
     marca_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_marca(cod_marca) NOT NULL,
-    publicacion_id DECIMAL(18, 0) FOREIGN KEY REFERENCES PIZZA_VIERNES_UADE.BI_publicacion(cod_publicacion) NOT NULL,
-    dias_vigencia_publicacion DECIMAL(18,0),
-    stock_inicial DECIMAL(18,0)
-    PRIMARY KEY(tiempo_id, rubro_id,marca_id,publicacion_id)
+    suma_dias_vigencia_publicacion DECIMAL(18,0),
+    suma_stock_inicial DECIMAL(18,0),
+    cantidad_publicaciones DECIMAL(18,0)
+    PRIMARY KEY(tiempo_id, rubro_id, marca_id)
 );
 
 -- CREACION DE FUNCIONES AUXILIARES
@@ -199,10 +195,6 @@ GO
 CREATE OR ALTER PROCEDURE PIZZA_VIERNES_UADE.BI_llenar_dimensiones AS 
 BEGIN
 
-    -- LLENADO DE DIMENSION PUBLICACION
-    INSERT INTO PIZZA_VIERNES_UADE.BI_publicacion (cod_publicacion)
-    SELECT DISTINCT cod_publicacion FROM PIZZA_VIERNES_UADE.publicacion;
-
     -- LLENADO DE DIMENSION MARCA
     INSERT INTO PIZZA_VIERNES_UADE.BI_marca (cod_marca, marca)
     SELECT DISTINCT cod_marca, descripcion FROM PIZZA_VIERNES_UADE.producto_marca;
@@ -297,8 +289,8 @@ BEGIN
     GROUP BY PIZZA_VIERNES_UADE.get_tiempo(p.fecha), u.id, btmp.id;
 
     -- LLENADO DE HECHOS PUBICACIONES
-    INSERT INTO PIZZA_VIERNES_UADE.BI_hechos_publicaciones (tiempo_id, rubro_id, marca_id, publicacion_id, dias_vigencia_publicacion, stock_inicial)
-    SELECT PIZZA_VIERNES_UADE.get_tiempo(p.fecha_inicio), br.id, bm.cod_marca, bp.cod_publicacion, DATEDIFF(DAY, p.fecha_inicio, p.fecha_fin), p.stock
+    INSERT INTO PIZZA_VIERNES_UADE.BI_hechos_publicaciones (tiempo_id, rubro_id, marca_id, suma_dias_vigencia_publicacion, suma_stock_inicial,cantidad_publicaciones)
+    SELECT PIZZA_VIERNES_UADE.get_tiempo(p.fecha_inicio), br.id, bm.cod_marca, SUM(DATEDIFF(DAY, p.fecha_inicio, p.fecha_fin)), SUM(p.stock), COUNT(*)
     FROM PIZZA_VIERNES_UADE.publicacion p
     INNER JOIN PIZZA_VIERNES_UADE.producto pr ON pr.id_producto = p.id_producto
     INNER JOIN PIZZA_VIERNES_UADE.producto_marca pm ON pm.cod_marca = pr.cod_marca
@@ -306,7 +298,7 @@ BEGIN
     INNER JOIN PIZZA_VIERNES_UADE.rubro r ON r.cod_rubro = s.cod_rubro
     INNER JOIN PIZZA_VIERNES_UADE.BI_rubro br ON br.rubro = r.descripcion AND br.subrubro = s.descripcion
     INNER JOIN PIZZA_VIERNES_UADE.BI_marca bm ON bm.marca = pm.descripcion
-    INNER JOIN PIZZA_VIERNES_UADE.BI_publicacion bp ON bp.cod_publicacion = p.cod_publicacion
+    GROUP BY PIZZA_VIERNES_UADE.get_tiempo(p.fecha_inicio), br.id, bm.cod_marca;
     
     -- LLENADO DE HECHOS DE VENTAS
     INSERT INTO PIZZA_VIERNES_UADE.BI_hechos_ventas (tiempo_id, ubicacion_almacenes_id, rubro_id, rango_etario_id, ubicacion_clientes_id, 
@@ -366,7 +358,7 @@ GO
 --CREACION DE VISTAS
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_tiempo_publicaciones AS 
-SELECT r.rubro, r.subrubro, t.cuatrimestre, t.anio, CAST(AVG(dias_vigencia_publicacion) AS decimal(18,2)) as tiempo_promedio_vigente
+SELECT r.rubro, r.subrubro, t.cuatrimestre, t.anio, CAST(SUM(suma_dias_vigencia_publicacion)/SUM(cantidad_publicaciones) AS decimal(18,2)) as tiempo_promedio_vigente
 FROM PIZZA_VIERNES_UADE.BI_hechos_publicaciones p
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_rubro r ON r.id = p.rubro_id
@@ -375,7 +367,7 @@ GROUP BY r.rubro, r.subrubro, t.cuatrimestre, t.anio
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_stock_inicial AS 
-SELECT m.marca,t.anio, AVG(stock_inicial) as stock_promedio
+SELECT m.marca,t.anio, SUM(suma_stock_inicial)/SUM(cantidad_publicaciones) as stock_promedio
 FROM PIZZA_VIERNES_UADE.BI_hechos_publicaciones p
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = p.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_marca m ON m.cod_marca = p.marca_id
