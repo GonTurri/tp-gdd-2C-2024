@@ -411,6 +411,8 @@ CREATE VIEW PIZZA_VIERNES_UADE.BI_rendimiento_rubros AS
     WHERE ranking <= 5
 GO 
 
+
+-- IGNORAR ESTA VISTA, FUE DESESTIMADA
 CREATE VIEW PIZZA_VIERNES_UADE.BI_volumen_ventas AS 
 SELECT t.anio, t.mes, r.rango, SUM(cantidad_ventas) AS volumen_ventas
 FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v
