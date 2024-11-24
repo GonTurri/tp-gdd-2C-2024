@@ -338,7 +338,7 @@ BEGIN
 		cant_envios_totales)
     SELECT PIZZA_VIERNES_UADE.get_tiempo(e.fecha_hora_entrega), u.id,u1.id, bte.id,
         SUM(e.costo),
-        COUNT(CASE WHEN PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega) = 'C' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega) = 'C' THEN 1 ELSE 0 END),
         COUNT(*)
     FROM PIZZA_VIERNES_UADE.envio e
     INNER JOIN PIZZA_VIERNES_UADE.BI_tipo_envio bte ON bte.tipo = e.tipo
@@ -384,7 +384,7 @@ GROUP BY m.marca, t.anio
 GO
 
 CREATE VIEW PIZZA_VIERNES_UADE.BI_promedio_mensual_ventas AS 
-SELECT u.provincia, t.mes, t.anio, AVG(valor_ventas) as valor_ventas_promedio
+SELECT u.provincia, t.mes, t.anio, SUM(valor_ventas)/SUM(cantidad_ventas) as valor_ventas_promedio
 FROM PIZZA_VIERNES_UADE.BI_hechos_ventas v
 INNER JOIN PIZZA_VIERNES_UADE.BI_tiempo t ON t.id = v.tiempo_id
 INNER JOIN PIZZA_VIERNES_UADE.BI_ubicacion u ON u.id = v.ubicacion_almacenes_id
