@@ -338,7 +338,7 @@ BEGIN
 		cant_envios_totales)
     SELECT PIZZA_VIERNES_UADE.get_tiempo(e.fecha_hora_entrega), u.id,u1.id, bte.id,
         SUM(e.costo),
-        COUNT(CASE WHEN PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega) = 'C' THEN 1 END),
+        COUNT(CASE WHEN PIZZA_VIERNES_UADE.get_estado_envio(e.fecha_programada, e.hora_inicio, e.hora_fin, e.fecha_hora_entrega) = 'C' THEN 1 ELSE 0 END),
         COUNT(*)
     FROM PIZZA_VIERNES_UADE.envio e
     INNER JOIN PIZZA_VIERNES_UADE.BI_tipo_envio bte ON bte.tipo = e.tipo
